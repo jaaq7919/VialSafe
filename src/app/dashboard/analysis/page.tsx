@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
+import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,6 +16,11 @@ import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import type { DateRange } from "react-day-picker";
 import { analyzeCriticalZones, type AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones";
+
+const Heatmap = dynamic(() => import('@/components/client/heatmap'), {
+    ssr: false,
+    loading: () => <div className="h-full w-full bg-muted flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+});
 
 const causeLabels: { [key: string]: string } = {
     'exceso-velocidad': 'Exceso de Velocidad',
@@ -45,6 +50,8 @@ export default function AnalysisPage() {
     const [typeFilter, setTypeFilter] = React.useState("");
     const [causeFilter, setCauseFilter] = React.useState("");
 
+    const [mapData, setMapData] = React.useState<[number, number, number][] | null>(null);
+
     const handleClearFilters = () => {
         setDateFilter(undefined);
         setTypeFilter("");
@@ -55,6 +62,7 @@ export default function AnalysisPage() {
         setIsLoading(true);
         setError(null);
         setAnalysisResult(null);
+        setMapData(null);
 
         try {
             const filteredAccidents = initialAccidents.filter(accident => {
@@ -102,6 +110,19 @@ export default function AnalysisPage() {
                  setError("La IA no identificó zonas críticas con los filtros seleccionados. Los datos no superan los umbrales de criticidad.");
             } else {
                  setAnalysisResult(result);
+                 // Simulate coordinates for heatmap based on mock accident locations
+                 const locationCoords: { [key: string]: [number, number] } = {
+                    'Carrera 7 con Calle 11': [3.4206, -76.3217],
+                    'Salida a Palmira, Cerca de la bomba': [3.4150, -76.3150],
+                    'Frente al parque principal': [3.4258, -76.3245],
+                    'Calle 8 con Carrera 4': [3.4230, -76.3260],
+                 };
+                 
+                 const heatMapPoints = filteredAccidents.map(acc => {
+                     const coords = locationCoords[acc.location] || [3.42, -76.32]; // Default coords
+                     return [coords[0], coords[1], 0.5] as [number, number, number]; // Lat, Lng, Intensity
+                 });
+                 setMapData(heatMapPoints);
             }
 
         } catch (e) {
@@ -196,89 +217,79 @@ export default function AnalysisPage() {
                 </CardFooter>
             </Card>
 
-            <Card className="mt-8">
-                <CardHeader>
-                    <CardTitle>Resultados del Análisis IA</CardTitle>
-                    <CardDescription>
-                        La inteligencia artificial ha procesado los datos para identificar puntos de alta siniestralidad.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {isLoading && (
-                         <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-8">
-                            <Loader2 className="w-12 h-12 mb-4 animate-spin text-primary" />
-                            <h3 className="text-lg font-semibold text-foreground">Contactando a la IA...</h3>
-                            <p className="mt-2 max-w-md">
-                                El analista de seguridad vial virtual está procesando el historial de accidentes para identificar patrones y zonas de alta concentración.
-                            </p>
-                        </div>
-                    )}
-                    {error && (
-                         <Alert variant="destructive">
-                            <AlertTriangle className="h-4 w-4" />
-                            <AlertTitle>Análisis sin resultados</AlertTitle>
-                            <AlertDescription>{error}</AlertDescription>
-                        </Alert>
-                    )}
-                    {analysisResult && analysisResult.criticalZones.length > 0 && (
-                       <>
-                            <Alert className="mb-6">
-                                <Lightbulb className="h-4 w-4" />
-                                <AlertTitle>Resumen del Analista IA</AlertTitle>
-                                <AlertDescription>{analysisResult.summary}</AlertDescription>
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Resultados del Análisis IA</CardTitle>
+                        <CardDescription>
+                            Puntos de alta siniestralidad procesados por la IA.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {isLoading && (
+                             <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-8">
+                                <Loader2 className="w-12 h-12 mb-4 animate-spin text-primary" />
+                                <h3 className="text-lg font-semibold text-foreground">Contactando a la IA...</h3>
+                                <p className="mt-2 max-w-md">
+                                    Procesando historial de accidentes para identificar patrones y zonas críticas.
+                                </p>
+                            </div>
+                        )}
+                        {error && (
+                             <Alert variant="destructive">
+                                <AlertTriangle className="h-4 w-4" />
+                                <AlertTitle>Análisis sin resultados</AlertTitle>
+                                <AlertDescription>{error}</AlertDescription>
                             </Alert>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Ubicación Crítica</TableHead>
-                                        <TableHead className="text-center">Nº de Accidentes</TableHead>
-                                        <TableHead>Periodo Analizado</TableHead>
-                                        <TableHead>Justificación IA</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {analysisResult.criticalZones.map((zone) => (
-                                        <TableRow key={zone.location}>
-                                            <TableCell className="font-medium">{zone.location}</TableCell>
-                                            <TableCell className="text-center">{zone.accidentCount}</TableCell>
-                                            <TableCell>{zone.analysisPeriod}</TableCell>
-                                            <TableCell>{zone.reason}</TableCell>
+                        )}
+                        {analysisResult && analysisResult.criticalZones.length > 0 && (
+                           <>
+                                <Alert className="mb-6">
+                                    <Lightbulb className="h-4 w-4" />
+                                    <AlertTitle>Resumen del Analista IA</AlertTitle>
+                                    <AlertDescription>{analysisResult.summary}</AlertDescription>
+                                </Alert>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Ubicación Crítica</TableHead>
+                                            <TableHead className="text-center">Nº</TableHead>
+                                            <TableHead>Periodo</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </>
-                    )}
-                     {!isLoading && !error && !analysisResult && (
-                        <div className="text-center text-muted-foreground p-8">
-                            <p>Ajuste los filtros y presione "Analizar Datos" para iniciar el análisis con IA.</p>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {analysisResult.criticalZones.map((zone) => (
+                                            <TableRow key={zone.location}>
+                                                <TableCell className="font-medium">{zone.location}</TableCell>
+                                                <TableCell className="text-center">{zone.accidentCount}</TableCell>
+                                                <TableCell>{zone.analysisPeriod}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </>
+                        )}
+                         {!isLoading && !error && !analysisResult && (
+                            <div className="text-center text-muted-foreground p-8">
+                                <p>Ajuste los filtros y presione "Analizar Datos" para iniciar el análisis con IA.</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Mapa de Calor de Zonas Críticas</CardTitle>
+                        <CardDescription>
+                            Visualización geográfica de la concentración de accidentes.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="aspect-video w-full h-full min-h-[400px] rounded-md overflow-hidden">
+                           <Heatmap data={mapData} />
                         </div>
-                    )}
-                </CardContent>
-            </Card>
-
-            <Card className="mt-8">
-                <CardHeader>
-                    <CardTitle>Mapa de Calor de Zonas Críticas</CardTitle>
-                    <CardDescription>
-                        Visualización geográfica de la concentración de accidentes. Esta funcionalidad estará disponible próximamente.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                     <div className="relative aspect-video w-full overflow-hidden rounded-md bg-muted flex items-center justify-center">
-                        <Image
-                            src="https://placehold.co/800x500.png"
-                            alt="Mapa de calor de ejemplo"
-                            fill={true}
-                            style={{objectFit: 'cover'}}
-                            data-ai-hint="heat map"
-                        />
-                        <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-                            <p className="text-lg font-semibold text-foreground bg-white/80 px-4 py-2 rounded-md shadow-lg">PRÓXIMAMENTE</p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                    </CardContent>
+                </Card>
+             </div>
         </>
     );
 }
