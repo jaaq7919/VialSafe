@@ -57,12 +57,15 @@ const formSchema = z.object({
   signageStatus: z.string({ required_error: "Seleccione el estado de la señalización." }),
 });
 
-type Accident = z.infer<typeof formSchema> & { id: string };
+export type Accident = z.infer<typeof formSchema> & { id: string };
 
-const initialAccidents: Accident[] = [
+export const initialAccidents: Accident[] = [
     { id: '1', location: 'Carrera 7 con Calle 11', date: new Date('2024-05-20'), time: '14:30', accidentType: 'colision', cause: 'imprudencia', signageStatus: 'buena' },
     { id: '2', location: 'Salida a Palmira, Cerca de la bomba', date: new Date('2024-05-18'), time: '08:15', accidentType: 'atropello', cause: 'exceso-velocidad', signageStatus: 'regular' },
     { id: '3', location: 'Frente al parque principal', date: new Date('2024-05-15'), time: '19:00', accidentType: 'caida-ocupante', cause: 'distraccion', signageStatus: 'inexistente' },
+    { id: '4', location: 'Carrera 7 con Calle 11', date: new Date('2024-04-28'), time: '11:00', accidentType: 'colision', cause: 'exceso-velocidad', signageStatus: 'buena' },
+    { id: '5', location: 'Calle 8 con Carrera 4', date: new Date('2024-04-22'), time: '21:45', accidentType: 'volcamiento', cause: 'alcohol', signageStatus: 'mala' },
+    { id: '6', location: 'Carrera 7 con Calle 11', date: new Date('2024-03-10'), time: '17:20', accidentType: 'colision', cause: 'distraccion', signageStatus: 'buena' },
 ];
 
 

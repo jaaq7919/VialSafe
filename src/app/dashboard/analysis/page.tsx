@@ -8,15 +8,39 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeCriticalZones, AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones";
-import { Loader2, Lightbulb, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, FileText, Download } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { initialAccidents } from "@/app/dashboard/accidents/page";
+import { format } from "date-fns";
+
 
 export default function AnalysisPage() {
   const [historicalData, setHistoricalData] = useState("");
-  const [criteria, setCriteria] = useState("");
+  const [criteria, setCriteria] = useState("Más de 2 accidentes en 90 días");
   const [result, setResult] = useState<AnalyzeCriticalZonesOutput | null>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+
+  const handleLoadSampleData = () => {
+    // Convert array of objects to CSV string
+    const headers = "ubicacion,fecha,hora,tipo,causa,señalizacion\n";
+    const csvData = initialAccidents.map(acc => 
+        `${acc.location},${format(new Date(acc.date), 'yyyy-MM-dd')},${acc.time},${acc.accidentType},${acc.cause},${acc.signageStatus}`
+    ).join('\n');
+    setHistoricalData(headers + csvData);
+    toast({
+        title: "Datos de Muestra Cargados",
+        description: "Se han cargado los accidentes de ejemplo en el área de texto.",
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -26,7 +50,7 @@ export default function AnalysisPage() {
       toast({
         variant: "destructive",
         title: "Datos Requeridos",
-        description: "Por favor, ingrese los datos históricos de accidentes para analizar.",
+        description: "Por favor, ingrese o cargue los datos históricos para analizar.",
       });
       return;
     }
@@ -53,33 +77,41 @@ export default function AnalysisPage() {
     <>
       <h1 className="text-3xl font-bold tracking-tight">Análisis de Zonas Críticas</h1>
       <p className="text-muted-foreground mt-1">
-        Use IA para identificar zonas de alto riesgo a partir de datos históricos de accidentes.
+        Use IA para agrupar, contar y detectar zonas de alto riesgo a partir de datos históricos.
       </p>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <Card>
+      <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Datos de Entrada para Análisis</CardTitle>
-            <CardDescription>Proporcione datos y criterios para el análisis.</CardDescription>
+            <CardTitle>1. Datos para el Análisis</CardTitle>
+            <CardDescription>
+                Proporcione los datos históricos de accidentes. Puede pegarlos directamente
+                o cargar los datos de muestra del sistema.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="historical-data">Datos Históricos de Accidentes (formato CSV preferido)</Label>
+                <div className="flex justify-between items-center">
+                    <Label htmlFor="historical-data">Datos Históricos de Accidentes (formato CSV)</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={handleLoadSampleData} disabled={isPending}>
+                        <Download className="mr-2 h-4 w-4"/>
+                        Cargar datos de muestra
+                    </Button>
+                </div>
                 <Textarea
                   id="historical-data"
-                  placeholder="Pegue los datos históricos aquí. Ej: fecha,ubicacion,causa,gravedad..."
+                  placeholder="Pegue aquí los datos en formato CSV. Ej: ubicacion,fecha,causa..."
                   value={historicalData}
                   onChange={(e) => setHistoricalData(e.target.value)}
-                  className="h-48"
+                  className="h-48 font-mono text-xs"
                   disabled={isPending}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="criteria">Criterios Opcionales</Label>
+                <Label htmlFor="criteria">2. Criterios para Zona Crítica</Label>
                 <Input
                   id="criteria"
-                  placeholder="Ej: densidad de accidentes > 5 por mes"
+                  placeholder="Ej: más de 5 accidentes en 30 días"
                   value={criteria}
                   onChange={(e) => setCriteria(e.target.value)}
                   disabled={isPending}
@@ -93,36 +125,77 @@ export default function AnalysisPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Resultados del Análisis</CardTitle>
-            <CardDescription>Las zonas críticas y recomendaciones identificadas por la IA aparecerán aquí.</CardDescription>
+            <CardTitle>3. Resultados del Análisis</CardTitle>
+            <CardDescription>Las zonas críticas identificadas por la IA aparecerán aquí.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {isPending ? (
-              <div className="space-y-4">
-                  <Skeleton className="h-8 w-1/3" />
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-8 w-1/3 mt-4" />
-                  <Skeleton className="h-20 w-full" />
+              <div className="space-y-2">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                           <TableHead><Skeleton className="h-5 w-24" /></TableHead>
+                           <TableHead><Skeleton className="h-5 w-20" /></TableHead>
+                           <TableHead><Skeleton className="h-5 w-28" /></TableHead>
+                           <TableHead><Skeleton className="h-5 w-48" /></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {[...Array(3)].map((_, i) => (
+                            <TableRow key={i}>
+                                <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+                <Skeleton className="h-8 w-1/3 mt-4" />
+                <Skeleton className="h-16 w-full" />
               </div>
             ) : result ? (
-              <div>
-                <div className="mb-4">
+              <>
+                 {result.criticalZones && result.criticalZones.length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead>Ubicación (Zona Crítica)</TableHead>
+                            <TableHead># Accidentes</TableHead>
+                            <TableHead>Periodo</TableHead>
+                            <TableHead>Razón</TableHead>
+                        </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {result.criticalZones.map((zone, index) => (
+                            <TableRow key={index} className="bg-destructive/10">
+                                <TableCell className="font-medium flex items-center">
+                                    <AlertTriangle className="w-4 h-4 mr-2 text-destructive" />
+                                    {zone.location}
+                                </TableCell>
+                                <TableCell className="font-bold text-center">{zone.accidentCount}</TableCell>
+                                <TableCell>{zone.analysisPeriod}</TableCell>
+                                <TableCell>{zone.reason}</TableCell>
+                            </TableRow>
+                        ))}
+                        </TableBody>
+                    </Table>
+                 ) : (
+                    <div className="text-center text-muted-foreground py-10">
+                        <p>No se encontraron zonas críticas con los criterios especificados.</p>
+                    </div>
+                 )}
+
+                <div className="mt-6">
                   <h3 className="font-semibold text-lg flex items-center mb-2">
-                    <AlertTriangle className="w-5 h-5 mr-2 text-destructive" />
-                    Zonas Críticas Identificadas
+                    <FileText className="w-5 h-5 mr-2" />
+                    Resumen del Analista
                   </h3>
-                  <p className="text-sm text-muted-foreground bg-secondary p-4 rounded-md">{result.criticalZones}</p>
+                  <p className="text-sm text-muted-foreground bg-secondary p-4 rounded-md">{result.summary}</p>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-lg flex items-center mb-2">
-                    <Lightbulb className="w-5 h-5 mr-2 text-yellow-500" />
-                    Recomendaciones
-                  </h3>
-                  <p className="text-sm text-muted-foreground bg-secondary p-4 rounded-md">{result.recommendations}</p>
-                </div>
-              </div>
+              </>
             ) : (
               <div className="text-center text-muted-foreground py-10">
                 <p>Los resultados se mostrarán aquí después del análisis.</p>
@@ -130,7 +203,6 @@ export default function AnalysisPage() {
             )}
           </CardContent>
         </Card>
-      </div>
     </>
   );
 }
