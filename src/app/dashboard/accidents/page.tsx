@@ -48,6 +48,7 @@ import { es } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
 import React, { useMemo } from "react";
 import type { DateRange } from "react-day-picker";
+import { Textarea } from "@/components/ui/textarea";
 
 
 const formSchema = z.object({
@@ -56,18 +57,19 @@ const formSchema = z.object({
   time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora no válido (HH:MM)."),
   accidentType: z.string({ required_error: "Seleccione un tipo de accidente." }),
   cause: z.string({ required_error: "Seleccione una causa probable." }),
-  signageStatus: z.string({ required_error: "Seleccione el estado de la señalización." }),
+  crossingStatus: z.string({ required_error: "Seleccione el estado del cruce." }),
+  observations: z.string().optional(),
 });
 
 export type Accident = z.infer<typeof formSchema> & { id: string };
 
 export const initialAccidents: Accident[] = [
-    { id: '1', location: 'Carrera 7 con Calle 11', date: new Date('2024-05-20'), time: '14:30', accidentType: 'colision', cause: 'imprudencia', signageStatus: 'buena' },
-    { id: '2', location: 'Salida a Palmira, Cerca de la bomba', date: new Date('2024-05-18'), time: '08:15', accidentType: 'atropello', cause: 'exceso-velocidad', signageStatus: 'regular' },
-    { id: '3', location: 'Frente al parque principal', date: new Date('2024-05-15'), time: '19:00', accidentType: 'caida-ocupante', cause: 'distraccion', signageStatus: 'inexistente' },
-    { id: '4', location: 'Carrera 7 con Calle 11', date: new Date('2024-04-28'), time: '11:00', accidentType: 'colision', cause: 'exceso-velocidad', signageStatus: 'buena' },
-    { id: '5', location: 'Calle 8 con Carrera 4', date: new Date('2024-04-22'), time: '21:45', accidentType: 'volcamiento', cause: 'alcohol', signageStatus: 'mala' },
-    { id: '6', location: 'Carrera 7 con Calle 11', date: new Date('2024-03-10'), time: '17:20', accidentType: 'colision', cause: 'distraccion', signageStatus: 'buena' },
+    { id: '1', location: 'Carrera 7 con Calle 11', date: new Date('2024-05-20'), time: '14:30', accidentType: 'colision', cause: 'imprudencia', crossingStatus: 'buena', observations: 'Uno de los conductores ignoró la señal de PARE.' },
+    { id: '2', location: 'Salida a Palmira, Cerca de la bomba', date: new Date('2024-05-18'), time: '08:15', accidentType: 'atropello', cause: 'exceso-velocidad', crossingStatus: 'regular', observations: 'Peatón cruzó por un lugar no permitido.' },
+    { id: '3', location: 'Frente al parque principal', date: new Date('2024-05-15'), time: '19:00', accidentType: 'caida-ocupante', cause: 'distraccion', crossingStatus: 'inexistente', observations: 'Calzada en mal estado y con poca iluminación.' },
+    { id: '4', location: 'Carrera 7 con Calle 11', date: new Date('2024-04-28'), time: '11:00', accidentType: 'colision', cause: 'exceso-velocidad', crossingStatus: 'buena', observations: '' },
+    { id: '5', location: 'Calle 8 con Carrera 4', date: new Date('2024-04-22'), time: '21:45', accidentType: 'volcamiento', cause: 'alcohol', crossingStatus: 'mala', observations: 'Conductor presentaba signos de embriaguez.' },
+    { id: '6', location: 'Carrera 7 con Calle 11', date: new Date('2024-03-10'), time: '17:20', accidentType: 'colision', cause: 'distraccion', crossingStatus: 'buena', observations: 'Conductor utilizando el teléfono móvil.' },
 ];
 
 
@@ -86,6 +88,7 @@ export default function AccidentsPage() {
         defaultValues: {
             location: "",
             time: "",
+            observations: "",
         },
     });
     
@@ -123,7 +126,7 @@ export default function AccidentsPage() {
                     description: "El nuevo reporte de accidente se ha guardado.",
                 });
             }
-            form.reset({ location: "", time: "", date: undefined, accidentType: undefined, cause: undefined, signageStatus: undefined });
+            form.reset({ location: "", time: "", date: undefined, accidentType: undefined, cause: undefined, crossingStatus: undefined, observations: "" });
 
         } catch (error) {
             console.error("Error en el registro:", error);
@@ -156,7 +159,7 @@ export default function AccidentsPage() {
     
     const handleCancelEdit = () => {
         setEditingAccidentId(null);
-        form.reset({ location: "", time: "", date: undefined, accidentType: undefined, cause: undefined, signageStatus: undefined });
+        form.reset({ location: "", time: "", date: undefined, accidentType: undefined, cause: undefined, crossingStatus: undefined, observations: "" });
     }
 
     const handleClearFilters = () => {
@@ -183,7 +186,7 @@ export default function AccidentsPage() {
         'otro': 'Otro',
     };
     
-    const signageLabels: { [key: string]: string } = {
+    const crossingLabels: { [key: string]: string } = {
         'buena': 'Buena',
         'regular': 'Regular',
         'mala': 'Mala',
@@ -283,9 +286,9 @@ export default function AccidentsPage() {
                                     </FormItem>
                                 )}/>
 
-                                <FormField control={form.control} name="signageStatus" render={({ field }) => (
+                                <FormField control={form.control} name="crossingStatus" render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Estado de Señalización</FormLabel>
+                                        <FormLabel>Estado del Cruce</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un estado" /></SelectTrigger></FormControl>
                                             <SelectContent>
@@ -298,6 +301,22 @@ export default function AccidentsPage() {
                                         <FormMessage />
                                     </FormItem>
                                 )}/>
+                                 <FormField
+                                    control={form.control}
+                                    name="observations"
+                                    render={({ field }) => (
+                                        <FormItem className="md:col-span-2">
+                                            <FormLabel>Observaciones</FormLabel>
+                                            <FormControl>
+                                                <Textarea
+                                                    placeholder="Añada cualquier detalle relevante del accidente..."
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </div>
                             <div className="flex gap-2">
                                 <Button type="submit" disabled={isSubmitting}>
@@ -383,7 +402,7 @@ export default function AccidentsPage() {
                                 <TableHead>Fecha y Hora</TableHead>
                                 <TableHead>Tipo</TableHead>
                                 <TableHead>Causa</TableHead>
-                                <TableHead>Señalización</TableHead>
+                                <TableHead>Estado del Cruce</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -395,7 +414,7 @@ export default function AccidentsPage() {
                                         <TableCell>{format(accident.date, 'dd/MM/yyyy')} {accident.time}</TableCell>
                                         <TableCell>{typeLabels[accident.accidentType] || 'N/A'}</TableCell>
                                         <TableCell>{causeLabels[accident.cause] || 'N/A'}</TableCell>
-                                        <TableCell>{signageLabels[accident.signageStatus] || 'N/A'}</TableCell>
+                                        <TableCell>{crossingLabels[accident.crossingStatus] || 'N/A'}</TableCell>
                                         <TableCell className="text-right">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
