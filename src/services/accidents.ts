@@ -1,39 +1,23 @@
 'use server';
 
-import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
-
 export type Accident = {
   location: string;
   date: Date;
   cause: string;
 };
 
+// This is a mock function for now.
 export async function addAccident(accidentData: Accident) {
-  try {
-    const docRef = await addDoc(collection(db, "accidents"), {
-      ...accidentData,
-      reportedAt: serverTimestamp(),
-    });
-    return { success: true, id: docRef.id };
-  } catch (e) {
-    console.error("Error adding document: ", e);
-    return { success: false, error: "No se pudo agregar el accidente." };
-  }
+  console.log("Nuevo accidente registrado (simulación):", accidentData);
+  // Simulate a successful API call
+  await new Promise(resolve => setTimeout(resolve, 500));
+  return { success: true, id: `mock_${new Date().getTime()}` };
 }
 
+// This is a mock function for now.
 export async function getAccidentsCount() {
-    try {
-        if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
-            console.warn("El ID del proyecto de Firebase no está configurado. Omitiendo la consulta a Firestore.");
-            return 0;
-        }
-        const accidentsCollection = collection(db, "accidents");
-        const querySnapshot = await getDocs(accidentsCollection);
-        return querySnapshot.size;
-    } catch (error) {
-        console.error("Error al obtener el conteo de accidentes:", error);
-        // En un entorno de producción, podrías querer manejar este error de forma más explícita.
-        return 0;
-    }
+    // Simulate an API call
+    await new Promise(resolve => setTimeout(resolve, 100));
+    // Return a static number for the dashboard
+    return 146;
 }

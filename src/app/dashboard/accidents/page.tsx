@@ -66,19 +66,19 @@ export default function AccidentsPage() {
         const result = await addAccident(values);
         if (result.success) {
             toast({
-                title: "Accidente Registrado",
-                description: "El nuevo registro de accidente ha sido guardado exitosamente en Firestore.",
+                title: "Simulación Exitosa",
+                description: "El reporte de accidente se ha enviado (simulación).",
             });
             form.reset();
         } else {
-            throw new Error(result.error || "Un error desconocido ocurrió al guardar.");
+            throw new Error(result.error || "Ocurrió un error en la simulación.");
         }
     } catch (error) {
-        console.error("Error al registrar el accidente:", error);
+        console.error("Error en la simulación de registro:", error);
         toast({
             variant: "destructive",
-            title: "Error al Registrar",
-            description: "No se pudo guardar el reporte. Verifique la configuración de Firebase y su conexión a internet.",
+            title: "Error en Simulación",
+            description: "No se pudo completar el envío del reporte simulado.",
         });
     } finally {
         setIsSubmitting(false);

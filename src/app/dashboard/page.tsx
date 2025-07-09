@@ -1,15 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardCharts } from "@/components/client/dashboard-charts";
 import { Eye, MapPin, Wrench, Siren } from "lucide-react";
-import { getAccidentsCount } from "@/services/accidents";
 
-export const dynamic = 'force-dynamic';
-
-export default async function DashboardPage() {
-  const totalAccidents = await getAccidentsCount();
-
+export default function DashboardPage() {
   const stats = [
-    { title: "Total Accidentes Registrados", value: totalAccidents.toString(), icon: Siren, change: "Datos desde Firestore" },
+    { title: "Total Accidentes Registrados", value: "146", icon: Siren, change: "Datos simulados" },
     { title: "Zonas Críticas", value: "4", icon: MapPin, change: "+1 esta semana" },
     { title: "Intervenciones Pendientes", value: "15", icon: Wrench, change: "3 esperando aprobación" },
     { title: "Reportes Activos", value: "28", icon: Eye, change: "Actualizado hace 2 horas" },
