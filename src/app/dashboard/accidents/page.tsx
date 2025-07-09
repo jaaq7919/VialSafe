@@ -33,6 +33,7 @@ import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
+import { addAccident } from "@/services/accidents";
 
 const formSchema = z.object({
   location: z.string().min(2, {
@@ -54,22 +55,34 @@ export default function AccidentsPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       location: "",
+      cause: undefined,
+      date: undefined,
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
-    console.log(values);
-    setTimeout(() => {
-        setIsSubmitting(false);
+    try {
+        const result = await addAccident(values);
+        if (result.success) {
+            toast({
+                title: "Accidente Registrado",
+                description: "El nuevo registro de accidente ha sido guardado exitosamente en Firestore.",
+            });
+            form.reset();
+        } else {
+            throw new Error(result.error || "Un error desconocido ocurrió al guardar.");
+        }
+    } catch (error) {
+        console.error("Error al registrar el accidente:", error);
         toast({
-            title: "Accidente Registrado",
-            description: "El nuevo registro de accidente ha sido guardado exitosamente.",
+            variant: "destructive",
+            title: "Error al Registrar",
+            description: "No se pudo guardar el reporte. Verifique la configuración de Firebase y su conexión a internet.",
         });
-        form.reset();
-        form.setValue("date", undefined);
-        form.setValue("cause", undefined);
-    }, 1500);
+    } finally {
+        setIsSubmitting(false);
+    }
   }
 
   return (
@@ -148,7 +161,7 @@ export default function AccidentsPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Causa Principal</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Seleccione una causa principal" />
