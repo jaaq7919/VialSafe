@@ -9,18 +9,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Loader2, AlertTriangle, Lightbulb, Calendar as CalendarIcon } from "lucide-react";
-import { initialAccidents, Accident } from "@/app/dashboard/accidents/page";
+import { initialAccidents } from "@/app/dashboard/accidents/page";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import type { DateRange } from "react-day-picker";
-
-type CriticalZone = {
-    location: string;
-    accidentCount: number;
-    reason: string;
-};
+import { analyzeCriticalZones, type AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones";
 
 const causeLabels: { [key: string]: string } = {
     'exceso-velocidad': 'Exceso de Velocidad',
@@ -43,7 +38,7 @@ const typeLabels: { [key: string]: string } = {
 
 export default function AnalysisPage() {
     const [isLoading, setIsLoading] = React.useState(false);
-    const [analysisResult, setAnalysisResult] = React.useState<CriticalZone[] | null>(null);
+    const [analysisResult, setAnalysisResult] = React.useState<AnalyzeCriticalZonesOutput | null>(null);
     const [error, setError] = React.useState<string | null>(null);
 
     const [dateFilter, setDateFilter] = React.useState<DateRange | undefined>();
@@ -60,8 +55,6 @@ export default function AnalysisPage() {
         setIsLoading(true);
         setError(null);
         setAnalysisResult(null);
-
-        await new Promise(resolve => setTimeout(resolve, 1500));
 
         try {
             const filteredAccidents = initialAccidents.filter(accident => {
@@ -82,29 +75,38 @@ export default function AnalysisPage() {
                  return;
             }
 
-            const accidentsByLocation: { [key: string]: Accident[] } = filteredAccidents.reduce((acc, current) => {
-                acc[current.location] = acc[current.location] || [];
-                acc[current.location].push(current);
-                return acc;
-            }, {} as { [key: string]: Accident[] });
+            const headers = "ubicacion,fecha,hora,tipo,causa,estado_cruce,observaciones";
+            const csvData = filteredAccidents.map(acc => {
+                return [
+                    `"${acc.location}"`,
+                    `"${format(acc.date, 'yyyy-MM-dd')}"`,
+                    `"${acc.time}"`,
+                    `"${acc.accidentType}"`,
+                    `"${acc.cause}"`,
+                    `"${acc.crossingStatus}"`,
+                    `"${acc.observations || ''}"`
+                ].join(',');
+            }).join('\\n');
+            const historicalAccidentData = `${headers}\\n${csvData}`;
+            
+            const fromDate = dateFilter?.from ? format(dateFilter.from, 'yyyy-MM-dd') : 'inicio';
+            const toDate = dateFilter?.to ? format(dateFilter.to, 'yyyy-MM-dd') : 'fin';
+            const criteria = `Analizar accidentes entre ${fromDate} y ${toDate}. Considerar una zona como crítica si tiene más de 2 accidentes.`;
 
-            const criticalZones: CriticalZone[] = Object.entries(accidentsByLocation)
-                .map(([location, accidents]) => ({
-                    location,
-                    accidentCount: accidents.length,
-                    reason: `Se supera el umbral de 2 accidentes. Causas comunes: ${[...new Set(accidents.map(a => causeLabels[a.cause] || a.cause))].join(', ')}.`
-                }))
-                .filter(zone => zone.accidentCount > 2);
+            const result = await analyzeCriticalZones({
+                historicalAccidentData,
+                criteria,
+            });
 
-            if(criticalZones.length === 0) {
-                 setError("No se identificaron zonas críticas con los filtros seleccionados. Se necesitan más de 2 accidentes en una misma ubicación para que se considere crítica.");
+            if(result.criticalZones.length === 0) {
+                 setError("La IA no identificó zonas críticas con los filtros seleccionados. Los datos no superan los umbrales de criticidad.");
             } else {
-                 setAnalysisResult(criticalZones);
+                 setAnalysisResult(result);
             }
 
         } catch (e) {
             console.error(e);
-            setError("Ocurrió un error inesperado durante el análisis simulado.");
+            setError("Ocurrió un error inesperado al contactar al servicio de IA. Por favor, intente de nuevo más tarde.");
         } finally {
             setIsLoading(false);
         }
@@ -196,18 +198,18 @@ export default function AnalysisPage() {
 
             <Card className="mt-8">
                 <CardHeader>
-                    <CardTitle>Resultados del Análisis</CardTitle>
+                    <CardTitle>Resultados del Análisis IA</CardTitle>
                     <CardDescription>
-                        Las zonas críticas se identifican cuando una ubicación registra más de 2 accidentes según los filtros aplicados.
+                        La inteligencia artificial ha procesado los datos para identificar puntos de alta siniestralidad.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     {isLoading && (
                          <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-8">
                             <Loader2 className="w-12 h-12 mb-4 animate-spin text-primary" />
-                            <h3 className="text-lg font-semibold text-foreground">Analizando datos...</h3>
+                            <h3 className="text-lg font-semibold text-foreground">Contactando a la IA...</h3>
                             <p className="mt-2 max-w-md">
-                                La IA está procesando el historial de accidentes para identificar patrones y zonas de alta concentración.
+                                El analista de seguridad vial virtual está procesando el historial de accidentes para identificar patrones y zonas de alta concentración.
                             </p>
                         </div>
                     )}
@@ -218,32 +220,40 @@ export default function AnalysisPage() {
                             <AlertDescription>{error}</AlertDescription>
                         </Alert>
                     )}
-                    {analysisResult && analysisResult.length > 0 && (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Ubicación Crítica</TableHead>
-                                    <TableHead className="text-center">Nº de Accidentes</TableHead>
-                                    <TableHead>Justificación</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {analysisResult.map((zone) => (
-                                    <TableRow key={zone.location}>
-                                        <TableCell className="font-medium">{zone.location}</TableCell>
-                                        <TableCell className="text-center">{zone.accidentCount}</TableCell>
-                                        <TableCell>{zone.reason}</TableCell>
+                    {analysisResult && analysisResult.criticalZones.length > 0 && (
+                       <>
+                            <Alert className="mb-6">
+                                <Lightbulb className="h-4 w-4" />
+                                <AlertTitle>Resumen del Analista IA</AlertTitle>
+                                <AlertDescription>{analysisResult.summary}</AlertDescription>
+                            </Alert>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Ubicación Crítica</TableHead>
+                                        <TableHead className="text-center">Nº de Accidentes</TableHead>
+                                        <TableHead>Periodo Analizado</TableHead>
+                                        <TableHead>Justificación IA</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {analysisResult.criticalZones.map((zone) => (
+                                        <TableRow key={zone.location}>
+                                            <TableCell className="font-medium">{zone.location}</TableCell>
+                                            <TableCell className="text-center">{zone.accidentCount}</TableCell>
+                                            <TableCell>{zone.analysisPeriod}</TableCell>
+                                            <TableCell>{zone.reason}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </>
                     )}
                      {!isLoading && !error && !analysisResult && (
                         <div className="text-center text-muted-foreground p-8">
-                            <p>Ajuste los filtros y presione "Analizar Datos" para iniciar el análisis.</p>
+                            <p>Ajuste los filtros y presione "Analizar Datos" para iniciar el análisis con IA.</p>
                         </div>
                     )}
-
                 </CardContent>
             </Card>
 

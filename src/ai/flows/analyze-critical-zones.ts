@@ -3,7 +3,7 @@
 /**
  * @fileOverview This AI flow analyzes historical accident data to identify critical zones.
  */
-/*
+
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
@@ -79,4 +79,3 @@ const analyzeCriticalZonesFlow = ai.defineFlow(
     return output!;
   }
 );
-*/
