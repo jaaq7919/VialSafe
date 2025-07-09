@@ -46,7 +46,9 @@ import { Calendar as CalendarIcon, Loader2, MoreHorizontal, Trash2, FilePenLine 
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
-import React from "react";
+import React, { useMemo } from "react";
+import type { DateRange } from "react-day-picker";
+
 
 const formSchema = z.object({
   location: z.string().min(3, "La ubicación debe tener al menos 3 caracteres."),
@@ -75,6 +77,10 @@ export default function AccidentsPage() {
     const [accidents, setAccidents] = React.useState<Accident[]>(initialAccidents);
     const [editingAccidentId, setEditingAccidentId] = React.useState<string | null>(null);
 
+    const [locationFilter, setLocationFilter] = React.useState("");
+    const [causeFilter, setCauseFilter] = React.useState("");
+    const [dateFilter, setDateFilter] = React.useState<DateRange | undefined>();
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -82,6 +88,20 @@ export default function AccidentsPage() {
             time: "",
         },
     });
+    
+    const filteredAccidents = useMemo(() => {
+        return accidents.filter(accident => {
+            const accidentDate = new Date(accident.date);
+            const from = dateFilter?.from;
+            const to = dateFilter?.to;
+
+            const dateMatch = !from || (accidentDate >= from && (!to || accidentDate <= to));
+            const locationMatch = !locationFilter || accident.location.toLowerCase().includes(locationFilter.toLowerCase());
+            const causeMatch = !causeFilter || accident.cause === causeFilter;
+
+            return dateMatch && locationMatch && causeMatch;
+        });
+    }, [accidents, locationFilter, causeFilter, dateFilter]);
 
     function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true);
@@ -121,7 +141,7 @@ export default function AccidentsPage() {
         setEditingAccidentId(accident.id);
         form.reset({
             ...accident,
-            date: new Date(accident.date), // Ensure date is a Date object for the form
+            date: new Date(accident.date),
         });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -137,6 +157,12 @@ export default function AccidentsPage() {
     const handleCancelEdit = () => {
         setEditingAccidentId(null);
         form.reset({ location: "", time: "", date: undefined, accidentType: undefined, cause: undefined, signageStatus: undefined });
+    }
+
+    const handleClearFilters = () => {
+        setLocationFilter("");
+        setCauseFilter("");
+        setDateFilter(undefined);
     }
 
     const causeLabels: { [key: string]: string } = {
@@ -288,11 +314,68 @@ export default function AccidentsPage() {
             </Card>
 
             <Card className="mt-8">
-                <CardHeader>
-                    <CardTitle>Historial de Accidentes</CardTitle>
-                    <CardDescription>Lista de los últimos accidentes de tránsito registrados en el sistema.</CardDescription>
+                 <CardHeader>
+                    <CardTitle>Historial y Reportes de Accidentes</CardTitle>
+                    <CardDescription>Filtre y consulte los accidentes registrados en el sistema.</CardDescription>
                 </CardHeader>
                 <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-center">
+                        <Input
+                            placeholder="Filtrar por ubicación..."
+                            value={locationFilter}
+                            onChange={(e) => setLocationFilter(e.target.value)}
+                            className="md:col-span-1"
+                        />
+                         <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={cn(
+                                        "justify-start text-left font-normal",
+                                        !dateFilter && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {dateFilter?.from ? (
+                                        dateFilter.to ? (
+                                            <>
+                                                {format(dateFilter.from, "LLL dd, y", { locale: es })} -{" "}
+                                                {format(dateFilter.to, "LLL dd, y", { locale: es })}
+                                            </>
+                                        ) : (
+                                            format(dateFilter.from, "LLL dd, y", { locale: es })
+                                        )
+                                    ) : (
+                                        <span>Filtrar por fecha</span>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={dateFilter?.from}
+                                    selected={dateFilter}
+                                    onSelect={setDateFilter}
+                                    numberOfMonths={2}
+                                    locale={es}
+                                />
+                            </PopoverContent>
+                        </Popover>
+                         <Select value={causeFilter} onValueChange={setCauseFilter}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Filtrar por causa" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(causeLabels).map(([value, label]) => (
+                                     <SelectItem key={value} value={value}>{label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button variant="ghost" onClick={handleClearFilters}>Limpiar Filtros</Button>
+                    </div>
+
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -305,32 +388,40 @@ export default function AccidentsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {accidents.map((accident) => (
-                                <TableRow key={accident.id}>
-                                    <TableCell className="font-medium">{accident.location}</TableCell>
-                                    <TableCell>{format(accident.date, 'dd/MM/yyyy')} {accident.time}</TableCell>
-                                    <TableCell>{typeLabels[accident.accidentType] || 'N/A'}</TableCell>
-                                    <TableCell>{causeLabels[accident.cause] || 'N/A'}</TableCell>
-                                    <TableCell>{signageLabels[accident.signageStatus] || 'N/A'}</TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleEdit(accident)}>
-                                                    <FilePenLine className="mr-2 h-4 w-4" />
-                                                    Editar
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleDelete(accident.id)} className="text-destructive">
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    Eliminar
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                            {filteredAccidents.length > 0 ? (
+                                filteredAccidents.map((accident) => (
+                                    <TableRow key={accident.id}>
+                                        <TableCell className="font-medium">{accident.location}</TableCell>
+                                        <TableCell>{format(accident.date, 'dd/MM/yyyy')} {accident.time}</TableCell>
+                                        <TableCell>{typeLabels[accident.accidentType] || 'N/A'}</TableCell>
+                                        <TableCell>{causeLabels[accident.cause] || 'N/A'}</TableCell>
+                                        <TableCell>{signageLabels[accident.signageStatus] || 'N/A'}</TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => handleEdit(accident)}>
+                                                        <FilePenLine className="mr-2 h-4 w-4" />
+                                                        Editar
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => handleDelete(accident.id)} className="text-destructive">
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Eliminar
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                 <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center">
+                                        No se encontraron resultados para los filtros aplicados.
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>

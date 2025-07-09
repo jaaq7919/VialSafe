@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -125,6 +126,29 @@ export default function AnalysisPage() {
                         </div>
                     )}
 
+                </CardContent>
+            </Card>
+
+            <Card className="mt-8">
+                <CardHeader>
+                    <CardTitle>Mapa de Calor de Zonas Críticas</CardTitle>
+                    <CardDescription>
+                        Visualización geográfica de la concentración de accidentes. Esta funcionalidad estará disponible próximamente.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <div className="relative aspect-video w-full overflow-hidden rounded-md bg-muted flex items-center justify-center">
+                        <Image
+                            src="https://placehold.co/800x500.png"
+                            alt="Mapa de calor de ejemplo"
+                            fill={true}
+                            style={{objectFit: 'cover'}}
+                            data-ai-hint="heat map"
+                        />
+                        <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                            <p className="text-lg font-semibold text-foreground bg-white/80 px-4 py-2 rounded-md shadow-lg">PRÓXIMAMENTE</p>
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
         </>
