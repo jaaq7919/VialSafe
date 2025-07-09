@@ -37,7 +37,7 @@ export default function DashboardLayout({
           <Link href="/dashboard" className="flex items-center gap-2">
             <ShieldCheck className="w-8 h-8 text-primary" />
             <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">
-              VialSafe
+              VíaSegura
             </span>
           </Link>
         </SidebarHeader>
@@ -49,26 +49,26 @@ export default function DashboardLayout({
             <DropdownMenuTrigger asChild>
                 <div className="group-data-[collapsible=icon]:p-2 p-2.5 flex items-center gap-2.5 cursor-pointer rounded-md hover:bg-sidebar-accent">
                     <Avatar className="h-8 w-8">
-                        <AvatarImage src="https://i.pravatar.cc/150?u=admin" alt="Admin" />
-                        <AvatarFallback>AD</AvatarFallback>
+                        <AvatarImage src="https://i.pravatar.cc/150?u=carlos" alt="Admin" />
+                        <AvatarFallback>CV</AvatarFallback>
                     </Avatar>
                     <div className="group-data-[collapsible=icon]:hidden flex flex-col items-start">
-                        <p className="text-sm font-medium">Admin User</p>
-                        <p className="text-xs text-muted-foreground">Administrator</p>
+                        <p className="text-sm font-medium">Carlos Vargas</p>
+                        <p className="text-xs text-muted-foreground">Administrador</p>
                     </div>
                 </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                     <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                    <span>Configuración</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
+                    <span>Cerrar Sesión</span>
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

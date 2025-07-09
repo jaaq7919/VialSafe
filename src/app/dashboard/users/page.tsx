@@ -20,39 +20,39 @@ import { MoreHorizontal, PlusCircle } from "lucide-react";
 
 const users = [
   {
-    name: "John Doe",
-    email: "john.doe@vialsafe.com",
-    role: "Administrator",
-    avatar: "https://i.pravatar.cc/150?u=a042581f4e29026704d",
-    initials: "JD",
+    name: "Carlos Vargas",
+    email: "carlos.vargas@viasegura.com",
+    role: "Administrador",
+    avatar: "https://i.pravatar.cc/150?u=carlos",
+    initials: "CV",
   },
   {
-    name: "Jane Smith",
-    email: "jane.smith@vialsafe.com",
-    role: "Traffic Analyst",
-    avatar: "https://i.pravatar.cc/150?u=a042581f4e29026705d",
-    initials: "JS",
+    name: "Sofía Reyes",
+    email: "sofia.reyes@viasegura.com",
+    role: "Analista de Tráfico",
+    avatar: "https://i.pravatar.cc/150?u=sofia",
+    initials: "SR",
   },
   {
-    name: "Peter Jones",
-    email: "peter.jones@vialsafe.com",
-    role: "Traffic Operator",
-    avatar: "https://i.pravatar.cc/150?u=a042581f4e29026706d",
-    initials: "PJ",
+    name: "Mateo Diaz",
+    email: "mateo.diaz@viasegura.com",
+    role: "Operador de Tráfico",
+    avatar: "https://i.pravatar.cc/150?u=mateo",
+    initials: "MD",
   },
     {
-    name: "Sarah Miller",
-    email: "sarah.miller@vialsafe.com",
-    role: "Traffic Operator",
-    avatar: "https://i.pravatar.cc/150?u=a042581f4e29026707d",
-    initials: "SM",
+    name: "Valentina Castillo",
+    email: "valentina.castillo@viasegura.com",
+    role: "Operador de Tráfico",
+    avatar: "https://i.pravatar.cc/150?u=valentina",
+    initials: "VC",
   },
 ];
 
 const roleVariant: { [key: string]: "default" | "secondary" | "outline" } = {
-  Administrator: "default",
-  "Traffic Analyst": "secondary",
-  "Traffic Operator": "outline",
+  Administrador: "default",
+  "Analista de Tráfico": "secondary",
+  "Operador de Tráfico": "outline",
 };
 
 export default function UsersPage() {
@@ -60,29 +60,29 @@ export default function UsersPage() {
     <>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Gestión de Usuarios</h1>
           <p className="text-muted-foreground mt-1">
-            Manage user accounts and permissions.
+            Administre las cuentas de usuario y los permisos.
           </p>
         </div>
         <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add User
+            Agregar Usuario
         </Button>
       </div>
 
       <Card className="mt-6">
         <CardHeader>
-            <CardTitle>All Users</CardTitle>
-            <CardDescription>A list of all users in the VialSafe system.</CardDescription>
+            <CardTitle>Todos los Usuarios</CardTitle>
+            <CardDescription>Una lista de todos los usuarios en el sistema VíaSegura.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Usuario</TableHead>
+                <TableHead>Rol</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -111,9 +111,9 @@ export default function UsersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
+                        <DropdownMenuItem>Editar</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">
-                          Delete
+                          Eliminar
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

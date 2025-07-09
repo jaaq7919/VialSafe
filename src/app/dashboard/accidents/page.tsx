@@ -30,18 +30,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { es } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
 
 const formSchema = z.object({
   location: z.string().min(2, {
-    message: "Location must be at least 2 characters.",
+    message: "La ubicación debe tener al menos 2 caracteres.",
   }),
   date: z.date({
-    required_error: "A date of accident is required.",
+    required_error: "La fecha del accidente es obligatoria.",
   }),
   cause: z.string({
-    required_error: "Please select a cause for the accident.",
+    required_error: "Por favor, seleccione una causa para el accidente.",
   }),
 });
 
@@ -62,8 +63,8 @@ export default function AccidentsPage() {
     setTimeout(() => {
         setIsSubmitting(false);
         toast({
-            title: "Accident Registered",
-            description: "The new accident record has been successfully saved.",
+            title: "Accidente Registrado",
+            description: "El nuevo registro de accidente ha sido guardado exitosamente.",
         });
         form.reset();
         form.setValue("date", undefined);
@@ -73,15 +74,15 @@ export default function AccidentsPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold tracking-tight">Accident Registration</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Registro de Accidentes</h1>
       <p className="text-muted-foreground mt-1">
-        Manually enter accident data including location, time, and cause.
+        Ingrese manualmente los datos de accidentes, incluyendo ubicación, fecha y causa.
       </p>
 
       <Card className="mt-6 max-w-2xl">
         <CardHeader>
-            <CardTitle>New Accident Report</CardTitle>
-            <CardDescription>Fill in the details below to log a new traffic accident.</CardDescription>
+            <CardTitle>Nuevo Reporte de Accidente</CardTitle>
+            <CardDescription>Complete los detalles a continuación para registrar un nuevo accidente de tráfico.</CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -91,9 +92,9 @@ export default function AccidentsPage() {
                 name="location"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Location</FormLabel>
+                    <FormLabel>Ubicación</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., Main St & 1st Ave" {...field} />
+                      <Input placeholder="Ej: Carrera 8 con Calle 10" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -104,7 +105,7 @@ export default function AccidentsPage() {
                 name="date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Date and Time</FormLabel>
+                    <FormLabel>Fecha y Hora</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -116,9 +117,9 @@ export default function AccidentsPage() {
                             )}
                           >
                             {field.value ? (
-                              format(field.value, "PPP")
+                              format(field.value, "PPP", { locale: es })
                             ) : (
-                              <span>Pick a date</span>
+                              <span>Elige una fecha</span>
                             )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
@@ -133,6 +134,7 @@ export default function AccidentsPage() {
                             date > new Date() || date < new Date("1900-01-01")
                           }
                           initialFocus
+                          locale={es}
                         />
                       </PopoverContent>
                     </Popover>
@@ -145,21 +147,23 @@ export default function AccidentsPage() {
                 name="cause"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Primary Cause</FormLabel>
+                    <FormLabel>Causa Principal</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a primary cause" />
+                          <SelectValue placeholder="Seleccione una causa principal" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="speeding">Speeding</SelectItem>
-                        <SelectItem value="distracted-driving">
-                          Distracted Driving
+                        <SelectItem value="exceso-velocidad">Exceso de Velocidad</SelectItem>
+                        <SelectItem value="distraccion">
+                          Conducción Distraída
                         </SelectItem>
-                        <SelectItem value="dui">Driving Under Influence</SelectItem>
-                        <SelectItem value="weather">Weather Conditions</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
+                        <SelectItem value="alcohol">Conducir Bajo Influencia (CBI)</SelectItem>
+                        <SelectItem value="clima">Condiciones Climáticas</SelectItem>
+                        <SelectItem value="imprudencia">Imprudencia del Conductor</SelectItem>
+                        <SelectItem value="falla-mecanica">Falla Mecánica</SelectItem>
+                        <SelectItem value="otro">Otro</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -168,7 +172,7 @@ export default function AccidentsPage() {
               />
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Submit Report
+                Enviar Reporte
               </Button>
             </form>
           </Form>

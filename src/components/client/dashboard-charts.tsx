@@ -5,32 +5,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
 const accidentsByMonthData = [
-  { month: "Jan", accidents: 186 },
-  { month: "Feb", accidents: 305 },
-  { month: "Mar", accidents: 237 },
-  { month: "Apr", accidents: 273 },
-  { month: "May", accidents: 209 },
-  { month: "Jun", accidents: 214 },
+  { month: "Ene", accidents: 18 },
+  { month: "Feb", accidents: 25 },
+  { month: "Mar", accidents: 21 },
+  { month: "Abr", accidents: 30 },
+  { month: "May", accidents: 24 },
+  { month: "Jun", accidents: 28 },
 ];
 
 const accidentsByCauseData = [
-    { name: 'Speeding', value: 400, fill: 'var(--color-speeding)' },
-    { name: 'Distraction', value: 300, fill: 'var(--color-distraction)' },
-    { name: 'Weather', value: 200, fill: 'var(--color-weather)' },
-    { name: 'DUI', value: 278, fill: 'var(--color-dui)' },
-    { name: 'Other', value: 189, fill: 'var(--color-other)' },
+    { name: 'Exceso de Velocidad', value: 42, fill: 'var(--color-velocidad)' },
+    { name: 'Imprudencia', value: 35, fill: 'var(--color-imprudencia)' },
+    { name: 'Clima', value: 15, fill: 'var(--color-clima)' },
+    { name: 'Alcohol (CBI)', value: 25, fill: 'var(--color-alcohol)' },
+    { name: 'Falla Mecánica', value: 18, fill: 'var(--color-mecanica)' },
 ];
 
 const chartConfig = {
   accidents: {
-    label: "Accidents",
+    label: "Accidentes",
     color: "hsl(var(--primary))",
   },
-   speeding: { label: 'Speeding', color: 'hsl(var(--chart-1))' },
-  distraction: { label: 'Distraction', color: 'hsl(var(--chart-2))' },
-  weather: { label: 'Weather', color: 'hsl(var(--chart-3))' },
-  dui: { label: 'DUI', color: 'hsl(var(--chart-4))' },
-  other: { label: 'Other', color: 'hsl(var(--chart-5))' },
+  velocidad: { label: 'Exceso de Velocidad', color: 'hsl(var(--chart-1))' },
+  imprudencia: { label: 'Imprudencia', color: 'hsl(var(--chart-2))' },
+  clima: { label: 'Clima', color: 'hsl(var(--chart-3))' },
+  alcohol: { label: 'Alcohol (CBI)', color: 'hsl(var(--chart-4))' },
+  mecanica: { label: 'Falla Mecánica', color: 'hsl(var(--chart-5))' },
 };
 
 export function DashboardCharts() {
@@ -38,7 +38,7 @@ export function DashboardCharts() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
       <Card>
         <CardHeader>
-          <CardTitle>Accidents by Month</CardTitle>
+          <CardTitle>Accidentes por Mes</CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-72 w-full">
@@ -59,7 +59,7 @@ export function DashboardCharts() {
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>Accidents by Cause</CardTitle>
+          <CardTitle>Accidentes por Causa</CardTitle>
         </CardHeader>
         <CardContent>
            <ChartContainer config={chartConfig} className="h-72 w-full">

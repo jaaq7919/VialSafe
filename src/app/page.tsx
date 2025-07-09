@@ -8,35 +8,35 @@ export default function LandingPage() {
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold text-foreground">VialSafe</h1>
+          <h1 className="text-2xl font-bold text-foreground">VíaSegura</h1>
         </div>
       </header>
       <main className="flex-grow flex items-center">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mx-auto text-center">
-            <p className="text-primary font-semibold">Next-Generation Traffic Intelligence</p>
+            <p className="text-primary font-semibold">Inteligencia Vial de Nueva Generación</p>
             <h2 className="mt-2 text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              Building Safer Roads, Together
+              Construyendo Vías Más Seguras en Florida, Valle
             </h2>
             <p className="mt-6 text-lg text-muted-foreground">
-              VialSafe leverages cutting-edge AI to analyze accident data, identify critical zones, and suggest effective road interventions. Empowering traffic authorities to make data-driven decisions for a safer tomorrow.
+              VíaSegura utiliza IA de vanguardia para analizar datos de accidentalidad, identificar zonas críticas y sugerir intervenciones viales efectivas. Empoderando a las autoridades de tránsito para tomar decisiones basadas en datos para un mañana más seguro.
             </p>
             <div className="mt-8 flex justify-center gap-4">
               <Button size="lg" asChild>
                 <Link href="/dashboard">
-                  Go to Dashboard
+                  Ir al Panel
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
               <Button size="lg" variant="outline">
-                Learn More
+                Conocer Más
               </Button>
             </div>
           </div>
         </div>
       </main>
       <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} VialSafe. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} VíaSegura. Todos los derechos reservados.</p>
       </footer>
     </div>
   );

@@ -3,18 +3,18 @@ import { DashboardCharts } from "@/components/client/dashboard-charts";
 import { Eye, MapPin, Wrench, Siren } from "lucide-react";
 
 const stats = [
-    { title: "Total Accidents", value: "1,423", icon: Siren, change: "+20.1% from last month" },
-    { title: "Critical Zones", value: "12", icon: MapPin, change: "+2 this week" },
-    { title: "Pending Interventions", value: "34", icon: Wrench, change: "5 waiting for approval" },
-    { title: "Active Reports", value: "57", icon: Eye, change: "Updated 2 hours ago" },
+    { title: "Total Accidentes (Año)", value: "218", icon: Siren, change: "+12.5% desde el mes pasado" },
+    { title: "Zonas Críticas", value: "4", icon: MapPin, change: "+1 esta semana" },
+    { title: "Intervenciones Pendientes", value: "15", icon: Wrench, change: "3 esperando aprobación" },
+    { title: "Reportes Activos", value: "28", icon: Eye, change: "Actualizado hace 2 horas" },
 ];
 
 export default function DashboardPage() {
   return (
     <>
-      <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Panel Principal</h1>
       <p className="text-muted-foreground mt-1">
-        Overview of traffic safety metrics and trends.
+        Resumen de métricas y tendencias de seguridad vial.
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">

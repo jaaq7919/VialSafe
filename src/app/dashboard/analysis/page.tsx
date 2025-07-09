@@ -25,8 +25,8 @@ export default function AnalysisPage() {
     if (!historicalData.trim()) {
       toast({
         variant: "destructive",
-        title: "Input Required",
-        description: "Please provide historical accident data to analyze.",
+        title: "Datos Requeridos",
+        description: "Por favor, ingrese los datos históricos de accidentes para analizar.",
       });
       return;
     }
@@ -39,11 +39,11 @@ export default function AnalysisPage() {
         });
         setResult(res);
       } catch (error) {
-        console.error("Analysis failed:", error);
+        console.error("El análisis falló:", error);
         toast({
           variant: "destructive",
-          title: "Analysis Failed",
-          description: "An error occurred while analyzing the data. Please try again.",
+          title: "Análisis Fallido",
+          description: "Ocurrió un error al analizar los datos. Por favor, inténtelo de nuevo.",
         });
       }
     });
@@ -51,24 +51,24 @@ export default function AnalysisPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold tracking-tight">Critical Zone Analysis</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Análisis de Zonas Críticas</h1>
       <p className="text-muted-foreground mt-1">
-        Use AI to identify high-risk zones from historical accident data.
+        Use IA para identificar zonas de alto riesgo a partir de datos históricos de accidentes.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         <Card>
           <CardHeader>
-            <CardTitle>Analysis Input</CardTitle>
-            <CardDescription>Provide data and criteria for the analysis.</CardDescription>
+            <CardTitle>Datos de Entrada para Análisis</CardTitle>
+            <CardDescription>Proporcione datos y criterios para el análisis.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="historical-data">Historical Accident Data (CSV format preferred)</Label>
+                <Label htmlFor="historical-data">Datos Históricos de Accidentes (formato CSV preferido)</Label>
                 <Textarea
                   id="historical-data"
-                  placeholder="Paste historical data here. e.g., date,location,cause,severity..."
+                  placeholder="Pegue los datos históricos aquí. Ej: fecha,ubicacion,causa,gravedad..."
                   value={historicalData}
                   onChange={(e) => setHistoricalData(e.target.value)}
                   className="h-48"
@@ -76,10 +76,10 @@ export default function AnalysisPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="criteria">Optional Criteria</Label>
+                <Label htmlFor="criteria">Criterios Opcionales</Label>
                 <Input
                   id="criteria"
-                  placeholder="e.g., accident density > 5 per month"
+                  placeholder="Ej: densidad de accidentes > 5 por mes"
                   value={criteria}
                   onChange={(e) => setCriteria(e.target.value)}
                   disabled={isPending}
@@ -87,7 +87,7 @@ export default function AnalysisPage() {
               </div>
               <Button type="submit" disabled={isPending}>
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Analyze Zones
+                Analizar Zonas
               </Button>
             </form>
           </CardContent>
@@ -95,8 +95,8 @@ export default function AnalysisPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Analysis Results</CardTitle>
-            <CardDescription>AI-identified critical zones and recommendations will appear here.</CardDescription>
+            <CardTitle>Resultados del Análisis</CardTitle>
+            <CardDescription>Las zonas críticas y recomendaciones identificadas por la IA aparecerán aquí.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {isPending ? (
@@ -111,21 +111,21 @@ export default function AnalysisPage() {
                 <div className="mb-4">
                   <h3 className="font-semibold text-lg flex items-center mb-2">
                     <AlertTriangle className="w-5 h-5 mr-2 text-destructive" />
-                    Identified Critical Zones
+                    Zonas Críticas Identificadas
                   </h3>
                   <p className="text-sm text-muted-foreground bg-secondary p-4 rounded-md">{result.criticalZones}</p>
                 </div>
                 <div>
                   <h3 className="font-semibold text-lg flex items-center mb-2">
                     <Lightbulb className="w-5 h-5 mr-2 text-yellow-500" />
-                    Recommendations
+                    Recomendaciones
                   </h3>
                   <p className="text-sm text-muted-foreground bg-secondary p-4 rounded-md">{result.recommendations}</p>
                 </div>
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-10">
-                <p>Results will be displayed here after analysis.</p>
+                <p>Los resultados se mostrarán aquí después del análisis.</p>
               </div>
             )}
           </CardContent>

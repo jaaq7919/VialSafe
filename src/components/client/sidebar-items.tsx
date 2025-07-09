@@ -18,27 +18,27 @@ import {
 const navItems = [
   {
     href: "/dashboard",
-    label: "Dashboard",
+    label: "Panel Principal",
     icon: LayoutDashboard,
   },
   {
     href: "/dashboard/accidents",
-    label: "Accident Registration",
+    label: "Registro de Accidentes",
     icon: Siren,
   },
   {
     href: "/dashboard/analysis",
-    label: "Critical Zone Analysis",
+    label: "Análisis Zonas Críticas",
     icon: MapPin,
   },
   {
     href: "/dashboard/interventions",
-    label: "Intervention Suggestions",
+    label: "Sugerir Intervenciones",
     icon: Wrench,
   },
   {
     href: "/dashboard/users",
-    label: "User Management",
+    label: "Gestión de Usuarios",
     icon: Users,
   },
 ];

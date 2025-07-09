@@ -1,29 +1,29 @@
-// use server'
+'use server';
 
 /**
- * @fileOverview AI-driven recommendations of road interventions based on historical accident data.
+ * @fileOverview Recomendaciones de intervenciones viales basadas en IA a partir de datos históricos de accidentes.
  *
- * - suggestRoadInterventions - A function that handles the road intervention suggestion process.
- * - SuggestRoadInterventionsInput - The input type for the suggestRoadInterventions function.
- * - SuggestRoadInterventionsOutput - The return type for the suggestRoadInterventions function.
+ * - suggestRoadInterventions - Una función que maneja el proceso de sugerencia de intervención vial.
+ * - SuggestRoadInterventionsInput - El tipo de entrada para la función suggestRoadInterventions.
+ * - SuggestRoadInterventionsOutput - El tipo de retorno para la función suggestRoadInterventions.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const SuggestRoadInterventionsInputSchema = z.object({
-  accidentData: z.string().describe('Historical accident data, including location, time, and cause.'),
-  criticalZoneAnalysis: z.string().describe('Analysis of critical zones with high accident concentration.'),
+  accidentData: z.string().describe('Datos históricos de accidentes, incluyendo ubicación, hora y causa.'),
+  criticalZoneAnalysis: z.string().describe('Análisis de zonas críticas con alta concentración de accidentes.'),
 });
 export type SuggestRoadInterventionsInput = z.infer<typeof SuggestRoadInterventionsInputSchema>;
 
 const SuggestRoadInterventionsOutputSchema = z.object({
   recommendations: z.array(
     z.object({
-      intervention: z.string().describe('Recommended road intervention (e.g., traffic signals, speed bumps).'),
-      justification: z.string().describe('Justification for the recommended intervention based on accident data patterns.'),
+      intervention: z.string().describe('Intervención vial recomendada (ej., semáforos, reductores de velocidad).'),
+      justification: z.string().describe('Justificación de la intervención recomendada basada en patrones de datos de accidentes.'),
     })
-  ).describe('List of recommended road interventions with justifications.'),
+  ).describe('Lista de intervenciones viales recomendadas con justificaciones.'),
 });
 export type SuggestRoadInterventionsOutput = z.infer<typeof SuggestRoadInterventionsOutputSchema>;
 
@@ -35,14 +35,14 @@ const prompt = ai.definePrompt({
   name: 'suggestRoadInterventionsPrompt',
   input: {schema: SuggestRoadInterventionsInputSchema},
   output: {schema: SuggestRoadInterventionsOutputSchema},
-  prompt: `You are an expert traffic analyst specializing in recommending road interventions to reduce accidents.
+  prompt: `Eres un experto analista de tráfico especializado en recomendar intervenciones viales para reducir accidentes en el contexto colombiano.
 
-  Based on the historical accident data and critical zone analysis, provide a list of recommended road interventions with justifications.
+  Basado en los datos históricos de accidentes y el análisis de zonas críticas, proporciona una lista de intervenciones viales recomendadas con sus justificaciones.
 
-  Historical Accident Data: {{{accidentData}}}
-  Critical Zone Analysis: {{{criticalZoneAnalysis}}}
+  Datos Históricos de Accidentes: {{{accidentData}}}
+  Análisis de Zonas Críticas: {{{criticalZoneAnalysis}}}
 
-  Format your response as a JSON object with a 'recommendations' field. Each recommendation should include the 'intervention' and 'justification'.
+  Formatea tu respuesta como un objeto JSON con un campo 'recommendations'. Cada recomendación debe incluir la 'intervention' y 'justification'.
   `,
 });
 

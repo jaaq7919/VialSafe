@@ -32,8 +32,8 @@ export default function InterventionsPage() {
     if (!accidentData.trim() || !analysisData.trim()) {
       toast({
         variant: "destructive",
-        title: "Input Required",
-        description: "Please provide both accident and analysis data.",
+        title: "Datos Requeridos",
+        description: "Por favor, proporcione tanto los datos de accidentes como los de análisis.",
       });
       return;
     }
@@ -46,11 +46,11 @@ export default function InterventionsPage() {
         });
         setResult(res);
       } catch (error) {
-        console.error("Suggestion failed:", error);
+        console.error("La sugerencia falló:", error);
         toast({
           variant: "destructive",
-          title: "Suggestion Failed",
-          description: "An error occurred while generating suggestions. Please try again.",
+          title: "Sugerencia Fallida",
+          description: "Ocurrió un error al generar sugerencias. Por favor, inténtelo de nuevo.",
         });
       }
     });
@@ -58,24 +58,24 @@ export default function InterventionsPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold tracking-tight">Road Intervention Suggestions</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Sugerencias de Intervención Vial</h1>
       <p className="text-muted-foreground mt-1">
-        Get AI-driven recommendations for road interventions.
+        Obtenga recomendaciones de intervenciones viales impulsadas por IA.
       </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
         <Card>
           <CardHeader>
-            <CardTitle>Suggestion Input</CardTitle>
-            <CardDescription>Provide data to generate intervention suggestions.</CardDescription>
+            <CardTitle>Datos de Entrada para Sugerencias</CardTitle>
+            <CardDescription>Proporcione datos para generar sugerencias de intervención.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="accident-data">Historical Accident Data</Label>
+                <Label htmlFor="accident-data">Datos Históricos de Accidentes</Label>
                 <Textarea
                   id="accident-data"
-                  placeholder="Paste historical data here..."
+                  placeholder="Pegue los datos históricos aquí..."
                   value={accidentData}
                   onChange={(e) => setAccidentData(e.target.value)}
                   className="h-32"
@@ -83,10 +83,10 @@ export default function InterventionsPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="analysis-data">Critical Zone Analysis</Label>
+                <Label htmlFor="analysis-data">Análisis de Zonas Críticas</Label>
                 <Textarea
                   id="analysis-data"
-                  placeholder="Paste critical zone analysis results here..."
+                  placeholder="Pegue los resultados del análisis de zonas críticas aquí..."
                   value={analysisData}
                   onChange={(e) => setAnalysisData(e.target.value)}
                   className="h-32"
@@ -95,7 +95,7 @@ export default function InterventionsPage() {
               </div>
               <Button type="submit" disabled={isPending}>
                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Get Suggestions
+                Obtener Sugerencias
               </Button>
             </form>
           </CardContent>
@@ -103,8 +103,8 @@ export default function InterventionsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Recommended Interventions</CardTitle>
-            <CardDescription>AI-generated suggestions will be listed below.</CardDescription>
+            <CardTitle>Intervenciones Recomendadas</CardTitle>
+            <CardDescription>Las sugerencias generadas por IA se listarán a continuación.</CardDescription>
           </CardHeader>
           <CardContent>
             {isPending ? (
@@ -117,8 +117,8 @@ export default function InterventionsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Intervention</TableHead>
-                    <TableHead>Justification</TableHead>
+                    <TableHead>Intervención</TableHead>
+                    <TableHead>Justificación</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -132,7 +132,7 @@ export default function InterventionsPage() {
               </Table>
             ) : (
               <div className="text-center text-muted-foreground py-10">
-                <p>Suggestions will be displayed here after submission.</p>
+                <p>Las sugerencias se mostrarán aquí después de enviar los datos.</p>
               </div>
             )}
           </CardContent>

@@ -1,11 +1,11 @@
 'use server';
 
 /**
- * @fileOverview Analyzes critical zones with high accident concentration using historical accident data.
+ * @fileOverview Analiza zonas críticas con alta concentración de accidentes utilizando datos históricos.
  *
- * - analyzeCriticalZones - A function that handles the analysis of critical zones.
- * - AnalyzeCriticalZonesInput - The input type for the analyzeCriticalZones function.
- * - AnalyzeCriticalZonesOutput - The return type for the analyzeCriticalZones function.
+ * - analyzeCriticalZones - Una función que maneja el análisis de zonas críticas.
+ * - AnalyzeCriticalZonesInput - El tipo de entrada para la función analyzeCriticalZones.
+ * - AnalyzeCriticalZonesOutput - El tipo de retorno para la función analyzeCriticalZones.
  */
 
 import {ai} from '@/ai/genkit';
@@ -14,12 +14,12 @@ import {z} from 'genkit';
 const AnalyzeCriticalZonesInputSchema = z.object({
   historicalAccidentData: z
     .string()
-    .describe('Historical accident data, preferably in CSV format.'),
+    .describe('Datos históricos de accidentes, preferiblemente en formato CSV.'),
   criteria: z
     .string()
     .optional()
     .describe(
-      'Optional criteria for identifying critical zones, e.g., accident density threshold.'
+      'Criterios opcionales para identificar zonas críticas, ej., umbral de densidad de accidentes.'
     ),
 });
 
@@ -31,12 +31,12 @@ const AnalyzeCriticalZonesOutputSchema = z.object({
   criticalZones: z
     .string()
     .describe(
-      'A description of the identified critical zones with high accident concentration.'
+      'Una descripción de las zonas críticas identificadas con alta concentración de accidentes.'
     ),
   recommendations: z
     .string()
     .describe(
-      'Recommendations for intervention in the identified critical zones.'
+      'Recomendaciones para intervención en las zonas críticas identificadas.'
     ),
 });
 
@@ -54,17 +54,17 @@ const prompt = ai.definePrompt({
   name: 'analyzeCriticalZonesPrompt',
   input: {schema: AnalyzeCriticalZonesInputSchema},
   output: {schema: AnalyzeCriticalZonesOutputSchema},
-  prompt: `You are a traffic analyst tasked with identifying critical zones with high accident concentration using historical accident data.
+  prompt: `Eres un analista de tráfico encargado de identificar zonas críticas con alta concentración de accidentes en Colombia, específicamente en Florida, Valle del Cauca, utilizando datos históricos.
 
-Analyze the following historical accident data to identify critical zones:
+Analiza los siguientes datos históricos de accidentes para identificar zonas críticas:
 
-Historical Accident Data: {{{historicalAccidentData}}}
+Datos Históricos de Accidentes: {{{historicalAccidentData}}}
 
-Optional Criteria: {{{criteria}}}
+Criterios Opcionales: {{{criteria}}}
 
-Based on the data, identify and describe the critical zones with high accident concentration and provide recommendations for intervention in these zones.
+Basado en los datos, identifica y describe las zonas críticas con alta concentración de accidentes y proporciona recomendaciones para intervenir en estas zonas.
 
-Format the output as a JSON object with "criticalZones" and "recommendations" fields.`,
+Formatea la salida como un objeto JSON con los campos "criticalZones" y "recommendations".`,
 });
 
 const analyzeCriticalZonesFlow = ai.defineFlow(
