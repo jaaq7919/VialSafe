@@ -13,6 +13,7 @@ import {
   Users,
   BarChartHorizontal,
   Lightbulb,
+  ClipboardCheck,
 } from "lucide-react";
 
 const navItems = [
@@ -35,6 +36,11 @@ const navItems = [
     href: "/dashboard/interventions",
     label: "Sugerencias de Intervención",
     icon: Lightbulb,
+  },
+  {
+    href: "/dashboard/controls",
+    label: "Puestos de Control",
+    icon: ClipboardCheck,
   },
   {
     href: "/dashboard/users",
