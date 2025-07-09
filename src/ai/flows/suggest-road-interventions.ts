@@ -1,13 +1,11 @@
 'use server';
 
 /**
- * @fileOverview This AI flow is temporarily disabled to manage costs.
- * The original code is preserved below, commented out, for future use.
+ * @fileOverview This AI flow suggests road interventions based on accident data.
  */
-
 /*
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 
 const SuggestRoadInterventionsInputSchema = z.object({
   accidentData: z.string().describe('Datos históricos de accidentes, incluyendo ubicación, hora y causa.'),

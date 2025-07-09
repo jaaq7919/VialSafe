@@ -11,6 +11,8 @@ import {
   LayoutDashboard,
   Siren,
   Users,
+  BarChartHorizontal,
+  Lightbulb,
 } from "lucide-react";
 
 const navItems = [
@@ -23,6 +25,16 @@ const navItems = [
     href: "/dashboard/accidents",
     label: "Registro de Accidentes",
     icon: Siren,
+  },
+  {
+    href: "/dashboard/analysis",
+    label: "Análisis de Zonas",
+    icon: BarChartHorizontal,
+  },
+  {
+    href: "/dashboard/interventions",
+    label: "Sugerencias de Intervención",
+    icon: Lightbulb,
   },
   {
     href: "/dashboard/users",

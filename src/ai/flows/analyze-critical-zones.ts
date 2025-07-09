@@ -1,13 +1,11 @@
 'use server';
 
 /**
- * @fileOverview This AI flow is temporarily disabled to manage costs.
- * The original code is preserved below, commented out, for future use.
+ * @fileOverview This AI flow analyzes historical accident data to identify critical zones.
  */
-
 /*
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 
 const AnalyzeCriticalZonesInputSchema = z.object({
   historicalAccidentData: z
