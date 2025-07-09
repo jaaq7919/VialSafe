@@ -10,8 +10,6 @@ import {
 import {
   LayoutDashboard,
   Siren,
-  MapPin,
-  Wrench,
   Users,
 } from "lucide-react";
 
@@ -25,16 +23,6 @@ const navItems = [
     href: "/dashboard/accidents",
     label: "Registro de Accidentes",
     icon: Siren,
-  },
-  {
-    href: "/dashboard/analysis",
-    label: "Análisis Zonas Críticas",
-    icon: MapPin,
-  },
-  {
-    href: "/dashboard/interventions",
-    label: "Sugerir Intervenciones",
-    icon: Wrench,
   },
   {
     href: "/dashboard/users",

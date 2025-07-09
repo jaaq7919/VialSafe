@@ -1,13 +1,11 @@
 'use server';
 
 /**
- * @fileOverview Recomendaciones de intervenciones viales basadas en IA a partir de datos históricos de accidentes.
- *
- * - suggestRoadInterventions - Una función que maneja el proceso de sugerencia de intervención vial.
- * - SuggestRoadInterventionsInput - El tipo de entrada para la función suggestRoadInterventions.
- * - SuggestRoadInterventionsOutput - El tipo de retorno para la función suggestRoadInterventions.
+ * @fileOverview This AI flow is temporarily disabled to manage costs.
+ * The original code is preserved below, commented out, for future use.
  */
 
+/*
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
@@ -57,3 +55,4 @@ const suggestRoadInterventionsFlow = ai.defineFlow(
     return output!;
   }
 );
+*/

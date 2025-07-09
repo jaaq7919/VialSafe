@@ -1,13 +1,11 @@
 'use server';
 
 /**
- * @fileOverview Analiza zonas críticas con alta concentración de accidentes utilizando datos históricos.
- *
- * - analyzeCriticalZones - Una función que maneja el análisis de zonas críticas.
- * - AnalyzeCriticalZonesInput - El tipo de entrada para la función analyzeCriticalZones.
- * - AnalyzeCriticalZonesOutput - El tipo de retorno para la función analyzeCriticalZones.
+ * @fileOverview This AI flow is temporarily disabled to manage costs.
+ * The original code is preserved below, commented out, for future use.
  */
 
+/*
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
@@ -83,3 +81,4 @@ const analyzeCriticalZonesFlow = ai.defineFlow(
     return output!;
   }
 );
+*/
