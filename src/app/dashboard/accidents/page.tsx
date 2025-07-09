@@ -41,6 +41,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarIcon, Loader2, MoreHorizontal, Trash2, FilePenLine } from "lucide-react";
 import { format } from "date-fns";
@@ -82,6 +92,9 @@ export default function AccidentsPage() {
     const [locationFilter, setLocationFilter] = React.useState("");
     const [causeFilter, setCauseFilter] = React.useState("");
     const [dateFilter, setDateFilter] = React.useState<DateRange | undefined>();
+    
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+    const [accidentIdToDelete, setAccidentIdToDelete] = React.useState<string | null>(null);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -167,6 +180,20 @@ export default function AccidentsPage() {
         setCauseFilter("");
         setDateFilter(undefined);
     }
+    
+    const openDeleteDialog = (id: string) => {
+        setAccidentIdToDelete(id);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (accidentIdToDelete) {
+            handleDelete(accidentIdToDelete);
+        }
+        setIsDeleteDialogOpen(false);
+        setAccidentIdToDelete(null);
+    };
+
 
     const causeLabels: { [key: string]: string } = {
         'exceso-velocidad': 'Exceso de Velocidad',
@@ -425,7 +452,7 @@ export default function AccidentsPage() {
                                                         <FilePenLine className="mr-2 h-4 w-4" />
                                                         Editar
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => handleDelete(accident.id)} className="text-destructive">
+                                                    <DropdownMenuItem onClick={() => openDeleteDialog(accident.id)} className="text-destructive">
                                                         <Trash2 className="mr-2 h-4 w-4" />
                                                         Eliminar
                                                     </DropdownMenuItem>
@@ -445,6 +472,21 @@ export default function AccidentsPage() {
                     </Table>
                 </CardContent>
             </Card>
+
+             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. El reporte de accidente será eliminado permanentemente de nuestros servidores.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setAccidentIdToDelete(null)}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteConfirm}>Eliminar</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }
