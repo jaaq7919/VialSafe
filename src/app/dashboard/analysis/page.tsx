@@ -54,7 +54,7 @@ export default function AnalysisPage() {
         setDateFilter(undefined);
         setTypeFilter("");
         setCauseFilter("");
-    }
+    };
 
     const handleAnalyze = async () => {
         setIsLoading(true);
@@ -252,7 +252,7 @@ export default function AnalysisPage() {
                     <CardTitle>Mapa de Calor de Zonas Críticas</CardTitle>
                     <CardDescription>
                         Visualización geográfica de la concentración de accidentes. Esta funcionalidad estará disponible próximamente.
-                    </cardDescription>
+                    </CardDescription>
                 </CardHeader>
                 <CardContent>
                      <div className="relative aspect-video w-full overflow-hidden rounded-md bg-muted flex items-center justify-center">
