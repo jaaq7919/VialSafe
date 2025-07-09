@@ -82,6 +82,31 @@ export const initialAccidents: Accident[] = [
     { id: '6', location: 'Carrera 7 con Calle 11', date: new Date('2024-03-10'), time: '17:20', accidentType: 'colision', cause: 'distraccion', crossingStatus: 'buena', observations: 'Conductor utilizando el teléfono móvil.' },
 ];
 
+export const causeLabels: { [key: string]: string } = {
+    'exceso-velocidad': 'Exceso de Velocidad',
+    'distraccion': 'Conducción Distraída',
+    'alcohol': 'Conducir Bajo Influencia (CBI)',
+    'clima': 'Condiciones Climáticas',
+    'imprudencia': 'Imprudencia del Conductor',
+    'falla-mecanica': 'Falla Mecánica',
+    'otro': 'Otro',
+};
+
+export const typeLabels: { [key: string]: string } = {
+    'colision': 'Colisión',
+    'atropello': 'Atropello',
+    'caida-ocupante': 'Caída de Ocupante',
+    'volcamiento': 'Volcamiento',
+    'otro': 'Otro',
+};
+
+export const crossingLabels: { [key: string]: string } = {
+    'buena': 'Buena',
+    'regular': 'Regular',
+    'mala': 'Mala',
+    'inexistente': 'Inexistente',
+};
+
 
 export default function AccidentsPage() {
     const { toast } = useToast();
@@ -193,33 +218,6 @@ export default function AccidentsPage() {
         setIsDeleteDialogOpen(false);
         setAccidentIdToDelete(null);
     };
-
-
-    const causeLabels: { [key: string]: string } = {
-        'exceso-velocidad': 'Exceso de Velocidad',
-        'distraccion': 'Conducción Distraída',
-        'alcohol': 'Conducir Bajo Influencia (CBI)',
-        'clima': 'Condiciones Climáticas',
-        'imprudencia': 'Imprudencia del Conductor',
-        'falla-mecanica': 'Falla Mecánica',
-        'otro': 'Otro',
-    };
-
-    const typeLabels: { [key: string]: string } = {
-        'colision': 'Colisión',
-        'atropello': 'Atropello',
-        'caida-ocupante': 'Caída de Ocupante',
-        'volcamiento': 'Volcamiento',
-        'otro': 'Otro',
-    };
-    
-    const crossingLabels: { [key: string]: string } = {
-        'buena': 'Buena',
-        'regular': 'Regular',
-        'mala': 'Mala',
-        'inexistente': 'Inexistente',
-    };
-
 
     return (
         <>

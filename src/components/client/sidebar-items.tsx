@@ -14,6 +14,7 @@ import {
   BarChartHorizontal,
   Lightbulb,
   ClipboardCheck,
+  FileDown,
 } from "lucide-react";
 
 const navItems = [
@@ -46,6 +47,11 @@ const navItems = [
     href: "/dashboard/users",
     label: "Gestión de Usuarios",
     icon: Users,
+  },
+  {
+    href: "/dashboard/reports",
+    label: "Generar Reportes",
+    icon: FileDown,
   },
 ];
 
