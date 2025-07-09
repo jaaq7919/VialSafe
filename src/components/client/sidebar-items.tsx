@@ -15,6 +15,7 @@ import {
   Lightbulb,
   ClipboardCheck,
   FileDown,
+  Route,
 } from "lucide-react";
 
 const navItems = [
@@ -41,6 +42,11 @@ const navItems = [
   {
     href: "/dashboard/controls",
     label: "Puestos de Control",
+    icon: Route,
+  },
+  {
+    href: "/dashboard/tracking",
+    label: "Seguimiento",
     icon: ClipboardCheck,
   },
   {
