@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -84,8 +84,6 @@ const MapController = ({ onLocationSelect }: LocationPickerProps) => {
 
 export default function LocationPicker({ onLocationSelect }: LocationPickerProps) {
     useEffect(() => {
-        // This is a common workaround for a known issue with Webpack and Leaflet's default icon.
-        // It manually sets the paths for the marker icons.
         delete (L.Icon.Default.prototype as any)._getIconUrl;
         L.Icon.Default.mergeOptions({
             iconRetinaUrl: iconRetinaUrl.src,
@@ -94,8 +92,8 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
         });
     }, []);
 
-    const displayMap = useMemo(
-        () => (
+    return (
+        <div className="h-[400px] w-full rounded-md overflow-hidden bg-muted">
             <MapContainer center={defaultCenter} zoom={15} style={{ height: '100%', width: '100%' }}>
                 <TileLayer
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -103,15 +101,6 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
                 />
                 <MapController onLocationSelect={onLocationSelect} />
             </MapContainer>
-        ),
-        // By removing dependencies, we ensure this only runs once.
-        // The onLocationSelect function is passed down to the controller.
-        [onLocationSelect]
-    );
-
-    return (
-        <div className="h-[400px] w-full rounded-md overflow-hidden bg-muted">
-            {displayMap}
         </div>
     );
 }
