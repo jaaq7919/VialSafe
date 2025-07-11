@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Loader2, AlertTriangle, Lightbulb, Calendar as CalendarIcon } from "lucide-react";
-import { initialAccidents } from "@/app/dashboard/accidents/page";
+import { type Accident, getAccidents } from "@/services/accidents";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -65,8 +65,10 @@ export default function AnalysisPage() {
         setMapData(null);
 
         try {
-            const filteredAccidents = initialAccidents.filter(accident => {
-                const accidentDate = new Date(accident.date);
+            const allAccidents = await getAccidents();
+            
+            const filteredAccidents = allAccidents.filter(accident => {
+                const accidentDate = accident.dateTime.toDate();
                 const from = dateFilter?.from;
                 const to = dateFilter?.to;
 
@@ -85,10 +87,11 @@ export default function AnalysisPage() {
 
             const headers = "ubicacion,fecha,hora,tipo,causa,estado_cruce,observaciones";
             const csvData = filteredAccidents.map(acc => {
+                const accDate = acc.dateTime.toDate();
                 return [
                     `"${acc.location}"`,
-                    `"${format(acc.date, 'yyyy-MM-dd')}"`,
-                    `"${acc.time}"`,
+                    `"${format(accDate, 'yyyy-MM-dd')}"`,
+                    `"${format(accDate, 'HH:mm')}"`,
                     `"${acc.accidentType}"`,
                     `"${acc.cause}"`,
                     `"${acc.crossingStatus}"`,

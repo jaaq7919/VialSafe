@@ -56,10 +56,10 @@ import { Calendar as CalendarIcon, Loader2, MoreHorizontal, Trash2, FilePenLine 
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useState, useCallback } from "react";
 import type { DateRange } from "react-day-picker";
 import { Textarea } from "@/components/ui/textarea";
-
+import { getAccidents, addAccident, updateAccident, deleteAccident, type Accident } from '@/services/accidents'
 
 const formSchema = z.object({
   location: z.string().min(3, "La ubicación debe tener al menos 3 caracteres."),
@@ -71,16 +71,6 @@ const formSchema = z.object({
   observations: z.string().optional(),
 });
 
-export type Accident = z.infer<typeof formSchema> & { id: string };
-
-export const initialAccidents: Accident[] = [
-    { id: '1', location: 'Carrera 7 con Calle 11', date: new Date('2024-05-20'), time: '14:30', accidentType: 'colision', cause: 'imprudencia', crossingStatus: 'buena', observations: 'Uno de los conductores ignoró la señal de PARE.' },
-    { id: '2', location: 'Salida a Palmira, Cerca de la bomba', date: new Date('2024-05-18'), time: '08:15', accidentType: 'atropello', cause: 'exceso-velocidad', crossingStatus: 'regular', observations: 'Peatón cruzó por un lugar no permitido.' },
-    { id: '3', location: 'Frente al parque principal', date: new Date('2024-05-15'), time: '19:00', accidentType: 'caida-ocupante', cause: 'distraccion', crossingStatus: 'inexistente', observations: 'Calzada en mal estado y con poca iluminación.' },
-    { id: '4', location: 'Carrera 7 con Calle 11', date: new Date('2024-04-28'), time: '11:00', accidentType: 'colision', cause: 'exceso-velocidad', crossingStatus: 'buena', observations: '' },
-    { id: '5', location: 'Calle 8 con Carrera 4', date: new Date('2024-04-22'), time: '21:45', accidentType: 'volcamiento', cause: 'alcohol', crossingStatus: 'mala', observations: 'Conductor presentaba signos de embriaguez.' },
-    { id: '6', location: 'Carrera 7 con Calle 11', date: new Date('2024-03-10'), time: '17:20', accidentType: 'colision', cause: 'distraccion', crossingStatus: 'buena', observations: 'Conductor utilizando el teléfono móvil.' },
-];
 
 // MOCK DATA - In a real app, this would come from a global state or API call to the settings data
 const causeOptions = [
@@ -114,16 +104,17 @@ export const crossingLabels: { [key: string]: string } = {
 
 export default function AccidentsPage() {
     const { toast } = useToast();
-    const [isSubmitting, setIsSubmitting] = React.useState(false);
-    const [accidents, setAccidents] = React.useState<Accident[]>(initialAccidents);
-    const [editingAccidentId, setEditingAccidentId] = React.useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [accidents, setAccidents] = useState<Accident[]>([]);
+    const [editingAccidentId, setEditingAccidentId] = useState<string | null>(null);
 
-    const [locationFilter, setLocationFilter] = React.useState("");
-    const [causeFilter, setCauseFilter] = React.useState("");
-    const [dateFilter, setDateFilter] = React.useState<DateRange | undefined>();
+    const [locationFilter, setLocationFilter] = useState("");
+    const [causeFilter, setCauseFilter] = useState("");
+    const [dateFilter, setDateFilter] = useState<DateRange | undefined>();
     
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
-    const [accidentIdToDelete, setAccidentIdToDelete] = React.useState<string | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [accidentIdToDelete, setAccidentIdToDelete] = useState<string | null>(null);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -133,10 +124,32 @@ export default function AccidentsPage() {
             observations: "",
         },
     });
+
+    const fetchAccidents = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const fetchedAccidents = await getAccidents();
+            setAccidents(fetchedAccidents);
+        } catch (error) {
+            console.error("Error fetching accidents:", error);
+            toast({
+                variant: "destructive",
+                title: "Error al Cargar Datos",
+                description: "No se pudieron obtener los reportes de accidentes desde la base de datos.",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [toast]);
+
+    useEffect(() => {
+        fetchAccidents();
+    }, [fetchAccidents]);
     
     const filteredAccidents = useMemo(() => {
         return accidents.filter(accident => {
-            const accidentDate = new Date(accident.date);
+            if (!accident.dateTime) return false;
+            const accidentDate = new Date(accident.dateTime.toDate());
             const from = dateFilter?.from;
             const to = dateFilter?.to;
 
@@ -148,27 +161,35 @@ export default function AccidentsPage() {
         });
     }, [accidents, locationFilter, causeFilter, dateFilter]);
 
-    function onSubmit(values: z.infer<typeof formSchema>) {
+    async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true);
         try {
+            // Combine date and time into a single Date object for Firestore
+            const [hours, minutes] = values.time.split(':').map(Number);
+            const dateTime = new Date(values.date);
+            dateTime.setHours(hours, minutes);
+
+            const accidentData = {
+                ...values,
+                dateTime
+            };
+            
             if (editingAccidentId) {
-                // Update existing accident
-                setAccidents(accs => accs.map(acc => acc.id === editingAccidentId ? { ...acc, ...values } : acc));
+                await updateAccident(editingAccidentId, accidentData);
                 toast({
                     title: "Reporte Actualizado",
                     description: "El reporte de accidente se ha actualizado exitosamente.",
                 });
                 setEditingAccidentId(null);
             } else {
-                // Add new accident
-                const newAccident: Accident = { ...values, id: new Date().getTime().toString() };
-                setAccidents(accs => [newAccident, ...accs]);
+                await addAccident(accidentData);
                 toast({
                     title: "Reporte Registrado",
                     description: "El nuevo reporte de accidente se ha guardado.",
                 });
             }
             form.reset({ location: "", time: "", date: undefined, accidentType: undefined, cause: undefined, crossingStatus: undefined, observations: "" });
+            fetchAccidents(); // Refetch data
 
         } catch (error) {
             console.error("Error en el registro:", error);
@@ -183,20 +204,38 @@ export default function AccidentsPage() {
     }
 
     const handleEdit = (accident: Accident) => {
+        if (!accident.id || !accident.dateTime) return;
         setEditingAccidentId(accident.id);
+
+        const accidentDate = accident.dateTime.toDate();
         form.reset({
-            ...accident,
-            date: new Date(accident.date),
+            location: accident.location,
+            date: accidentDate,
+            time: format(accidentDate, 'HH:mm'),
+            accidentType: accident.accidentType,
+            cause: accident.cause,
+            crossingStatus: accident.crossingStatus,
+            observations: accident.observations,
         });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleDelete = (id: string) => {
-        setAccidents(accs => accs.filter(acc => acc.id !== id));
-        toast({
-            title: "Reporte Eliminado",
-            description: "El reporte de accidente ha sido eliminado.",
-        });
+    const handleDelete = async (id: string) => {
+        try {
+            await deleteAccident(id);
+            toast({
+                title: "Reporte Eliminado",
+                description: "El reporte de accidente ha sido eliminado.",
+            });
+            fetchAccidents(); // Refetch data
+        } catch (error) {
+             console.error("Error deleting accident:", error);
+             toast({
+                variant: "destructive",
+                title: "Error al Eliminar",
+                description: "No se pudo eliminar el reporte.",
+            });
+        }
     };
     
     const handleCancelEdit = () => {
@@ -430,11 +469,17 @@ export default function AccidentsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredAccidents.length > 0 ? (
+                            {isLoading ? (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center">
+                                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                                    </TableCell>
+                                </TableRow>
+                            ) : filteredAccidents.length > 0 ? (
                                 filteredAccidents.map((accident) => (
                                     <TableRow key={accident.id}>
                                         <TableCell className="font-medium">{accident.location}</TableCell>
-                                        <TableCell>{format(new Date(accident.date), 'dd/MM/yyyy')} {accident.time}</TableCell>
+                                        <TableCell>{accident.dateTime ? format(accident.dateTime.toDate(), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
                                         <TableCell>{typeLabels[accident.accidentType] || 'N/A'}</TableCell>
                                         <TableCell>{causeLabels[accident.cause] || 'N/A'}</TableCell>
                                         <TableCell>{crossingLabels[accident.crossingStatus] || 'N/A'}</TableCell>
@@ -448,7 +493,7 @@ export default function AccidentsPage() {
                                                         <FilePenLine className="mr-2 h-4 w-4" />
                                                         Editar
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => openDeleteDialog(accident.id)} className="text-destructive">
+                                                    <DropdownMenuItem onClick={() => openDeleteDialog(accident.id!)} className="text-destructive">
                                                         <Trash2 className="mr-2 h-4 w-4" />
                                                         Eliminar
                                                     </DropdownMenuItem>
