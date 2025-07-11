@@ -82,23 +82,27 @@ export const initialAccidents: Accident[] = [
     { id: '6', location: 'Carrera 7 con Calle 11', date: new Date('2024-03-10'), time: '17:20', accidentType: 'colision', cause: 'distraccion', crossingStatus: 'buena', observations: 'Conductor utilizando el teléfono móvil.' },
 ];
 
-export const causeLabels: { [key: string]: string } = {
-    'exceso-velocidad': 'Exceso de Velocidad',
-    'distraccion': 'Conducción Distraída',
-    'alcohol': 'Conducir Bajo Influencia (CBI)',
-    'clima': 'Condiciones Climáticas',
-    'imprudencia': 'Imprudencia del Conductor',
-    'falla-mecanica': 'Falla Mecánica',
-    'otro': 'Otro',
-};
+// MOCK DATA - In a real app, this would come from a global state or API call to the settings data
+const causeOptions = [
+    { value: 'exceso-velocidad', label: 'Exceso de Velocidad' },
+    { value: 'distraccion', label: 'Conducción Distraída' },
+    { value: 'alcohol', label: 'Conducir Bajo Influencia (CBI)' },
+    { value: 'clima', label: 'Condiciones Climáticas' },
+    { value: 'imprudencia', label: 'Imprudencia del Conductor' },
+    { value: 'falla-mecanica', label: 'Falla Mecánica' },
+    { value: 'otro', label: 'Otro' },
+];
 
-export const typeLabels: { [key: string]: string } = {
-    'colision': 'Colisión',
-    'atropello': 'Atropello',
-    'caida-ocupante': 'Caída de Ocupante',
-    'volcamiento': 'Volcamiento',
-    'otro': 'Otro',
-};
+const typeOptions = [
+    { value: 'colision', label: 'Colisión' },
+    { value: 'atropello', label: 'Atropello' },
+    { value: 'caida-ocupante', label: 'Caída de Ocupante' },
+    { value: 'volcamiento', label: 'Volcamiento' },
+    { value: 'otro', label: 'Otro' },
+];
+
+export const causeLabels: { [key: string]: string } = Object.fromEntries(causeOptions.map(c => [c.value, c.label]));
+export const typeLabels: { [key: string]: string } = Object.fromEntries(typeOptions.map(t => [t.value, t.label]));
 
 export const crossingLabels: { [key: string]: string } = {
     'buena': 'Buena',
@@ -281,11 +285,9 @@ export default function AccidentsPage() {
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un tipo" /></SelectTrigger></FormControl>
                                             <SelectContent>
-                                                <SelectItem value="colision">Colisión</SelectItem>
-                                                <SelectItem value="atropello">Atropello</SelectItem>
-                                                <SelectItem value="caida-ocupante">Caída de Ocupante</SelectItem>
-                                                <SelectItem value="volcamiento">Volcamiento</SelectItem>
-                                                <SelectItem value="otro">Otro</SelectItem>
+                                                {typeOptions.map(option => (
+                                                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -298,13 +300,9 @@ export default function AccidentsPage() {
                                         <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl><SelectTrigger><SelectValue placeholder="Seleccione una causa" /></SelectTrigger></FormControl>
                                             <SelectContent>
-                                                <SelectItem value="exceso-velocidad">Exceso de Velocidad</SelectItem>
-                                                <SelectItem value="distraccion">Conducción Distraída</SelectItem>
-                                                <SelectItem value="alcohol">Conducir Bajo Influencia (CBI)</SelectItem>
-                                                <SelectItem value="clima">Condiciones Climáticas</SelectItem>
-                                                <SelectItem value="imprudencia">Imprudencia del Conductor</SelectItem>
-                                                <SelectItem value="falla-mecanica">Falla Mecánica</SelectItem>
-                                                <SelectItem value="otro">Otro</SelectItem>
+                                                {causeOptions.map(option => (
+                                                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                         <FormMessage />
@@ -436,7 +434,7 @@ export default function AccidentsPage() {
                                 filteredAccidents.map((accident) => (
                                     <TableRow key={accident.id}>
                                         <TableCell className="font-medium">{accident.location}</TableCell>
-                                        <TableCell>{format(accident.date, 'dd/MM/yyyy')} {accident.time}</TableCell>
+                                        <TableCell>{format(new Date(accident.date), 'dd/MM/yyyy')} {accident.time}</TableCell>
                                         <TableCell>{typeLabels[accident.accidentType] || 'N/A'}</TableCell>
                                         <TableCell>{causeLabels[accident.cause] || 'N/A'}</TableCell>
                                         <TableCell>{crossingLabels[accident.crossingStatus] || 'N/A'}</TableCell>
