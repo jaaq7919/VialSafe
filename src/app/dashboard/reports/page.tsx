@@ -50,7 +50,7 @@ export default function ReportsPage() {
                 const to = dateFilter?.to;
 
                 const dateMatch = !from || (accidentDate >= from && (!to || accidentDate <= to));
-                const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(accident.accidentType);
+                const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(accident.type);
                 const causeMatch = selectedCauses.length === 0 || selectedCauses.includes(accident.cause);
 
                 return dateMatch && typeMatch && causeMatch;
@@ -85,7 +85,7 @@ export default function ReportsPage() {
                 `"${row.addressPrefix} ${row.address}"`,
                 `"${format(new Date(row.dateTime), 'yyyy-MM-dd')}"`,
                 `"${format(new Date(row.dateTime), 'HH:mm')}"`,
-                `"${typeLabels[row.accidentType]}"`,
+                `"${typeLabels[row.type]}"`,
                 `"${causeLabels[row.cause]}"`,
                 `"${row.crossingStatus}"`,
                 `"${row.observations || ''}"`,
@@ -249,7 +249,7 @@ export default function ReportsPage() {
                                         <TableRow key={accident.id}>
                                             <TableCell className="font-medium">{accident.addressPrefix} {accident.address}</TableCell>
                                             <TableCell>{format(new Date(accident.dateTime), 'dd/MM/yyyy HH:mm')}</TableCell>
-                                            <TableCell>{typeLabels[accident.accidentType] || 'N/A'}</TableCell>
+                                            <TableCell>{typeLabels[accident.type] || 'N/A'}</TableCell>
                                             <TableCell>{causeLabels[accident.cause] || 'N/A'}</TableCell>
                                         </TableRow>
                                     ))

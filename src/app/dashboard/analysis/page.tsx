@@ -82,7 +82,7 @@ export default function AnalysisPage() {
                 const to = dateFilter?.to;
 
                 const dateMatch = !from || (accidentDate >= from && (!to || accidentDate <= to));
-                const typeMatch = !typeFilter || accident.accidentType === typeFilter;
+                const typeMatch = !typeFilter || accident.type === typeFilter;
                 const causeMatch = !causeFilter || accident.cause === causeFilter;
 
                 return dateMatch && typeMatch && causeMatch;
@@ -101,7 +101,7 @@ export default function AnalysisPage() {
                     `"${acc.addressPrefix} ${acc.address}"`,
                     `"${format(accDate, 'yyyy-MM-dd')}"`,
                     `"${format(accDate, 'HH:mm')}"`,
-                    `"${acc.accidentType}"`,
+                    `"${acc.type}"`,
                     `"${acc.cause}"`,
                     `"${acc.crossingStatus}"`,
                     `"${acc.observations || ''}"`,

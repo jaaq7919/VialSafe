@@ -11,13 +11,14 @@ export type Accident = {
   address: string;
   location: string; 
   dateTime: Date;
-  accidentType: string;
+  type: string;
   cause: string;
   crossingStatus: string;
   observations?: string;
   latitude: number;
   longitude: number;
   createdAt: Date;
+  createdBy: string;
 };
 
 
@@ -38,23 +39,14 @@ export async function getAccidents(): Promise<Accident[]> {
 }
 
 // Añadir un nuevo accidente
-export async function addAccident(data: {
-  addressPrefix: string;
-  address: string;
-  location: string;
-  dateTime: Date;
-  accidentType: string;
-  cause: string;
-  crossingStatus: string;
-  observations?: string;
-  latitude: number;
-  longitude: number;
-}) {
+export async function addAccident(data: Omit<Accident, 'id' | 'createdAt' | 'createdBy'>) {
   try {
     const docRef = await addDoc(accidentsCollection, {
       ...data,
+      location: `${data.addressPrefix} ${data.address}`,
       dateTime: Timestamp.fromDate(data.dateTime),
       createdAt: serverTimestamp(),
+      createdBy: "admin_user" // Placeholder until auth is implemented
     });
     return { success: true, id: docRef.id };
   } catch (error) {
@@ -64,22 +56,12 @@ export async function addAccident(data: {
 }
 
 // Actualizar un accidente existente
-export async function updateAccident(id: string, data: {
-  addressPrefix: string;
-  address: string;
-  location: string;
-  dateTime: Date;
-  accidentType: string;
-  cause: string;
-  crossingStatus: string;
-  observations?: string;
-  latitude: number;
-  longitude: number;
-}) {
+export async function updateAccident(id: string, data: Omit<Accident, 'id' | 'createdAt' | 'createdBy'>) {
   const accidentDoc = doc(db, 'accidents', id);
   try {
     await updateDoc(accidentDoc, {
         ...data,
+        location: `${data.addressPrefix} ${data.address}`,
         dateTime: Timestamp.fromDate(data.dateTime)
     });
     return { success: true };

@@ -63,7 +63,7 @@ export default function InterventionsPage() {
                     `"${acc.addressPrefix} ${acc.address}"`,
                     `"${format(accDate, 'yyyy-MM-dd')}"`,
                     `"${format(accDate, 'HH:mm')}"`,
-                    `"${acc.accidentType}"`,
+                    `"${acc.type}"`,
                     `"${acc.cause}"`,
                     `"${acc.crossingStatus}"`,
                     `"${acc.observations || ''}"`,

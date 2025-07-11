@@ -103,7 +103,7 @@ const formSchema = z.object({
   address: z.string().min(3, "La dirección debe tener al menos 3 caracteres."),
   date: z.date({ required_error: "La fecha es obligatoria." }),
   time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora no válido (HH:MM)."),
-  accidentType: z.string({ required_error: "Seleccione un tipo de accidente." }),
+  type: z.string({ required_error: "Seleccione un tipo de accidente." }),
   cause: z.string({ required_error: "Seleccione una causa probable." }),
   crossingStatus: z.string({ required_error: "Seleccione el estado del cruce." }),
   observations: z.string().optional(),
@@ -220,9 +220,14 @@ export default function AccidentsPage() {
             dateTime.setHours(hours, minutes);
 
             const accidentData = {
-                ...values,
+                addressPrefix: values.addressPrefix,
+                address: values.address,
                 location: `${values.addressPrefix} ${values.address}`,
-                dateTime,
+                dateTime: dateTime,
+                type: values.type,
+                cause: values.cause,
+                crossingStatus: values.crossingStatus,
+                observations: values.observations,
                 latitude: values.latitude,
                 longitude: values.longitude,
             };
@@ -241,7 +246,7 @@ export default function AccidentsPage() {
                     description: "El nuevo reporte de accidente se ha guardado.",
                 });
             }
-            form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, accidentType: undefined, cause: undefined, crossingStatus: undefined, observations: "", latitude: undefined, longitude: undefined });
+            form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, type: undefined, cause: undefined, crossingStatus: undefined, observations: "", latitude: undefined, longitude: undefined });
             fetchAccidents();
 
         } catch (error) {
@@ -266,7 +271,7 @@ export default function AccidentsPage() {
             address: accident.address,
             date: accidentDate,
             time: format(accidentDate, 'HH:mm'),
-            accidentType: accident.accidentType,
+            type: accident.type,
             cause: accident.cause,
             crossingStatus: accident.crossingStatus,
             observations: accident.observations,
@@ -296,7 +301,7 @@ export default function AccidentsPage() {
     
     const handleCancelEdit = () => {
         setEditingAccidentId(null);
-        form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, accidentType: undefined, cause: undefined, crossingStatus: undefined, observations: "", latitude: undefined, longitude: undefined });
+        form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, type: undefined, cause: undefined, crossingStatus: undefined, observations: "", latitude: undefined, longitude: undefined });
     }
 
     const handleClearFilters = () => {
@@ -400,7 +405,7 @@ export default function AccidentsPage() {
                                         </FormItem>
                                     )}/>
                                     
-                                    <FormField control={form.control} name="accidentType" render={({ field }) => (
+                                    <FormField control={form.control} name="type" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Tipo de Accidente</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value}>
@@ -567,7 +572,7 @@ export default function AccidentsPage() {
                                     <TableRow key={accident.id}>
                                         <TableCell className="font-medium">{accident.addressPrefix} {accident.address}</TableCell>
                                         <TableCell>{accident.dateTime ? format(new Date(accident.dateTime), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
-                                        <TableCell>{typeLabels[accident.accidentType] || 'N/A'}</TableCell>
+                                        <TableCell>{typeLabels[accident.type] || 'N/A'}</TableCell>
                                         <TableCell>{causeLabels[accident.cause] || 'N/A'}</TableCell>
                                         <TableCell>{crossingLabels[accident.crossingStatus] || 'N/A'}</TableCell>
                                         <TableCell className="text-right">
