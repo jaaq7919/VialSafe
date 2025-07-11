@@ -67,7 +67,7 @@ const initialUsers: User[] = [
   {
     id: "1",
     name: "Carlos Vargas",
-    email: "carlos.vargas@viasegura.com",
+    email: "carlos.vargas@centinelavial.com",
     role: "Administrador",
     avatar: "https://i.pravatar.cc/150?u=carlos",
     initials: "CV",
@@ -75,7 +75,7 @@ const initialUsers: User[] = [
   {
     id: "2",
     name: "Sofía Reyes",
-    email: "sofia.reyes@viasegura.com",
+    email: "sofia.reyes@centinelavial.com",
     role: "Analista de Tráfico",
     avatar: "https://i.pravatar.cc/150?u=sofia",
     initials: "SR",
@@ -83,7 +83,7 @@ const initialUsers: User[] = [
   {
     id: "3",
     name: "Mateo Diaz",
-    email: "mateo.diaz@viasegura.com",
+    email: "mateo.diaz@centinelavial.com",
     role: "Operador de Tráfico",
     avatar: "https://i.pravatar.cc/150?u=mateo",
     initials: "MD",
@@ -91,7 +91,7 @@ const initialUsers: User[] = [
   {
     id: "4",
     name: "Valentina Castillo",
-    email: "valentina.castillo@viasegura.com",
+    email: "valentina.castillo@centinelavial.com",
     role: "Operador de Tráfico",
     avatar: "https://i.pravatar.cc/150?u=valentina",
     initials: "VC",
@@ -196,7 +196,7 @@ export default function UsersPage() {
       <Card className="mt-6">
         <CardHeader>
             <CardTitle>Todos los Usuarios</CardTitle>
-            <CardDescription>Una lista de todos los usuarios en el sistema VíaSegura.</CardDescription>
+            <CardDescription>Una lista de todos los usuarios en el sistema Centinela Vial.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -281,7 +281,7 @@ export default function UsersPage() {
                               <FormItem>
                                   <FormLabel>Correo Electrónico</FormLabel>
                                   <FormControl>
-                                      <Input placeholder="Ej: juan.perez@viasegura.com" {...field} />
+                                      <Input placeholder="Ej: juan.perez@centinelavial.com" {...field} />
                                   </FormControl>
                                   <FormMessage />
                               </FormItem>

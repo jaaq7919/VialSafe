@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'VíaSegura',
+  title: 'Centinela Vial',
   description: 'Una solución moderna para la seguridad y gestión del tráfico en Florida, Valle del Cauca.',
 };
 

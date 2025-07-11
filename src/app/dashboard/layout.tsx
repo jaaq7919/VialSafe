@@ -37,7 +37,7 @@ export default function DashboardLayout({
           <Link href="/dashboard" className="flex items-center gap-2">
             <ShieldCheck className="w-8 h-8 text-primary" />
             <span className="text-lg font-semibold group-data-[collapsible=icon]:hidden">
-              VíaSegura
+              Centinela Vial
             </span>
           </Link>
         </SidebarHeader>

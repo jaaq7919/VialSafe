@@ -8,7 +8,7 @@ export default function LandingPage() {
       <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-8 w-8 text-primary" />
-          <h1 className="text-2xl font-bold text-foreground">VíaSegura</h1>
+          <h1 className="text-2xl font-bold text-foreground">Centinela Vial</h1>
         </div>
       </header>
       <main className="flex-grow flex items-center">
@@ -19,7 +19,7 @@ export default function LandingPage() {
               Construyendo Vías Más Seguras en Florida, Valle
             </h2>
             <p className="mt-6 text-lg text-muted-foreground">
-              VíaSegura utiliza IA de vanguardia para analizar datos de accidentalidad, identificar zonas críticas y sugerir intervenciones viales efectivas. Empoderando a las autoridades de tránsito para tomar decisiones basadas en datos para un mañana más seguro.
+              Centinela Vial utiliza IA de vanguardia para analizar datos de accidentalidad, identificar zonas críticas y sugerir intervenciones viales efectivas. Empoderando a las autoridades de tránsito para tomar decisiones basadas en datos para un mañana más seguro.
             </p>
             <div className="mt-8 flex justify-center gap-4">
               <Button size="lg" asChild>
@@ -36,7 +36,7 @@ export default function LandingPage() {
         </div>
       </main>
       <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} VíaSegura. Todos los derechos reservados.</p>
+        <p>&copy; {new Date().getFullYear()} Centinela Vial. Todos los derechos reservados.</p>
       </footer>
     </div>
   );
