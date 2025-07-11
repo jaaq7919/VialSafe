@@ -52,7 +52,7 @@ export default function ControlsPage() {
 
             const headers = "ubicacion,fecha,hora,tipo,causa,estado_cruce,observaciones,latitud,longitud";
             const csvData = allAccidents.map(acc => {
-                const accDate = acc.dateTime.toDate();
+                const accDate = new Date(acc.dateTime);
                 return [
                     `"${acc.addressPrefix} ${acc.address}"`,
                     `"${format(accDate, 'yyyy-MM-dd')}"`,

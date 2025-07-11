@@ -18,19 +18,20 @@ export type AccidentFormData = {
 };
 
 // Este tipo representa la estructura del documento en Firestore.
+// Los Timestamps se convierten a Date para ser pasados a componentes de cliente.
 export type Accident = {
   id?: string;
   addressPrefix: string;
   address: string;
   location: string; 
-  dateTime: Timestamp;
+  dateTime: Date;
   accidentType: string;
   cause: string;
   crossingStatus: string;
   observations?: string;
   latitude: number;
   longitude: number;
-  createdAt: Timestamp;
+  createdAt: Date;
 };
 
 
@@ -39,10 +40,15 @@ const accidentsCollection = collection(db, 'accidents');
 // Obtener todos los accidentes
 export async function getAccidents(): Promise<Accident[]> {
   const snapshot = await getDocs(accidentsCollection);
-  return snapshot.docs.map(doc => ({
-    id: doc.id,
-    ...(doc.data() as Omit<Accident, 'id'>)
-  }));
+  return snapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      dateTime: (data.dateTime as Timestamp).toDate(),
+      createdAt: (data.createdAt as Timestamp).toDate(),
+    } as Accident;
+  });
 }
 
 // Añadir un nuevo accidente

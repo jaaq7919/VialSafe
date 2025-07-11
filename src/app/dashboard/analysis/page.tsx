@@ -77,7 +77,7 @@ export default function AnalysisPage() {
 
             const filteredAccidents = allAccidents.filter(accident => {
                 if (!accident.dateTime) return false;
-                const accidentDate = accident.dateTime.toDate();
+                const accidentDate = new Date(accident.dateTime);
                 const from = dateFilter?.from;
                 const to = dateFilter?.to;
 
@@ -96,7 +96,7 @@ export default function AnalysisPage() {
 
             const headers = "ubicacion,fecha,hora,tipo,causa,estado_cruce,observaciones,latitud,longitud";
             const csvData = filteredAccidents.map(acc => {
-                const accDate = acc.dateTime.toDate();
+                const accDate = new Date(acc.dateTime);
                 return [
                     `"${acc.addressPrefix} ${acc.address}"`,
                     `"${format(accDate, 'yyyy-MM-dd')}"`,

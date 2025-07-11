@@ -192,7 +192,7 @@ export default function AccidentsPage() {
     const filteredAccidents = useMemo(() => {
         return accidents.filter(accident => {
             if (!accident.dateTime) return false;
-            const accidentDate = new Date(accident.dateTime.toDate());
+            const accidentDate = new Date(accident.dateTime);
             const from = dateFilter?.from;
             const to = dateFilter?.to;
 
@@ -260,7 +260,7 @@ export default function AccidentsPage() {
         if (!accident.id || !accident.dateTime) return;
         setEditingAccidentId(accident.id);
 
-        const accidentDate = accident.dateTime.toDate();
+        const accidentDate = new Date(accident.dateTime);
         form.reset({
             addressPrefix: accident.addressPrefix,
             address: accident.address,
@@ -566,7 +566,7 @@ export default function AccidentsPage() {
                                 filteredAccidents.map((accident) => (
                                     <TableRow key={accident.id}>
                                         <TableCell className="font-medium">{accident.addressPrefix} {accident.address}</TableCell>
-                                        <TableCell>{accident.dateTime ? format(accident.dateTime.toDate(), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
+                                        <TableCell>{accident.dateTime ? format(new Date(accident.dateTime), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
                                         <TableCell>{typeLabels[accident.accidentType] || 'N/A'}</TableCell>
                                         <TableCell>{causeLabels[accident.cause] || 'N/A'}</TableCell>
                                         <TableCell>{crossingLabels[accident.crossingStatus] || 'N/A'}</TableCell>

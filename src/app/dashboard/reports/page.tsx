@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Loader2, FileDown, Calendar as CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
-import { type Accident, causeLabels, typeLabels, getAccidents } from "@/app/dashboard/accidents/page";
+import { type Accident, getAccidents } from "@/services/accidents";
+import { causeLabels, typeLabels } from "@/app/dashboard/accidents/page";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
@@ -44,7 +45,7 @@ export default function ReportsPage() {
             const allAccidents = await getAccidents();
             
             const filteredAccidents = allAccidents.filter(accident => {
-                const accidentDate = accident.dateTime.toDate();
+                const accidentDate = new Date(accident.dateTime);
                 const from = dateFilter?.from;
                 const to = dateFilter?.to;
 
@@ -82,8 +83,8 @@ export default function ReportsPage() {
         reportData.forEach(row => {
             const rowArray = [
                 `"${row.addressPrefix} ${row.address}"`,
-                `"${format(row.dateTime.toDate(), 'yyyy-MM-dd')}"`,
-                `"${format(row.dateTime.toDate(), 'HH:mm')}"`,
+                `"${format(new Date(row.dateTime), 'yyyy-MM-dd')}"`,
+                `"${format(new Date(row.dateTime), 'HH:mm')}"`,
                 `"${typeLabels[row.accidentType]}"`,
                 `"${causeLabels[row.cause]}"`,
                 `"${row.crossingStatus}"`,
@@ -247,7 +248,7 @@ export default function ReportsPage() {
                                     reportData.map((accident) => (
                                         <TableRow key={accident.id}>
                                             <TableCell className="font-medium">{accident.addressPrefix} {accident.address}</TableCell>
-                                            <TableCell>{format(accident.dateTime.toDate(), 'dd/MM/yyyy HH:mm')}</TableCell>
+                                            <TableCell>{format(new Date(accident.dateTime), 'dd/MM/yyyy HH:mm')}</TableCell>
                                             <TableCell>{typeLabels[accident.accidentType] || 'N/A'}</TableCell>
                                             <TableCell>{causeLabels[accident.cause] || 'N/A'}</TableCell>
                                         </TableRow>
