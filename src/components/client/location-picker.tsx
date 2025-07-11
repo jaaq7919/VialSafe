@@ -5,7 +5,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-// Fix for default icon issue with Leaflet in React
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
@@ -14,42 +13,59 @@ interface LocationPickerProps {
   onLocationSelect: (address: { prefix: string, street: string }) => void;
 }
 
-// Default coordinates for Florida, Valle del Cauca
 const defaultCenter: L.LatLngExpression = [3.423, -76.324];
 
-const addressPrefixMap: { [key: string]: string } = {
-  road: 'CLL',
-  footway: 'CLL',
-  street: 'CLL',
-  path: 'CLL',
-  motorway: 'AUT',
-  highway: 'CRA',
+const addressPrefixMap: { [key: string]: string[] } = {
+    CLL: ['calle', 'cll'],
+    CRA: ['carrera', 'cra', 'cr', 'carr'],
+    AV: ['avenida', 'av', 'ave'],
+    DG: ['diagonal', 'dg'],
+    TR: ['transversal', 'tr', 'trv', 'tv'],
+    AUT: ['autopista', 'aut'],
+    KM: ['kilómetro', 'km'],
+    AC: ['avenida calle', 'ac'],
+    AK: ['avenida carrera', 'ak'],
 };
 
 const extractAddress = (osmData: any): { prefix: string, street: string } | null => {
-    if (!osmData.address) return null;
+    if (!osmData || !osmData.display_name) return null;
 
-    const { road, highway, footway, street, path, house_number, suburb } = osmData.address;
-    const streetName = road || highway || footway || street || path || '';
-    const addressType = Object.keys(osmData.address).find(key => 
-        ['road', 'highway', 'footway', 'street', 'path'].includes(key)
-    ) as keyof typeof addressPrefixMap | undefined;
+    const displayName = osmData.display_name.toLowerCase();
+    const parts = displayName.split(',').map(p => p.trim());
     
-    const prefix = addressType ? addressPrefixMap[addressType] : 'CLL';
+    // Find parts that look like streets/avenues
+    const streetParts = parts.filter(p => /\d/.test(p) && (p.includes('calle') || p.includes('carrera') || p.includes('avenida')));
+
+    let prefix = 'CLL'; 
+    let street = parts[0] || ''; 
     
-    let fullStreet = streetName;
-    if (house_number) {
-        fullStreet += ` #${house_number}`;
-    }
-    if (suburb && !streetName) {
-        fullStreet = suburb; // Fallback to suburb if no street name
+    if (streetParts.length >= 1) {
+        street = streetParts.join(' con ');
+        // Clean up street names
+        street = street.replace(/calle/g, 'Calle')
+                       .replace(/carrera/g, 'Carrera')
+                       .replace(/avenida/g, 'Avenida')
+                       .replace(/\s+/g, ' ').trim();
+        
+        // Determine prefix based on the first street part
+        const firstStreet = streetParts[0];
+        for (const [key, keywords] of Object.entries(addressPrefixMap)) {
+            if (keywords.some(kw => firstStreet.includes(kw))) {
+                prefix = key;
+                break;
+            }
+        }
+    } else if (osmData.address) {
+        const { road, highway, suburb } = osmData.address;
+        street = road || highway || suburb || street;
+        if (highway) prefix = 'CRA';
     }
 
-    // A simple heuristic to format Colombian-style addresses if possible
-    const parts = osmData.display_name.split(',');
-    const simpleAddress = parts.length > 2 ? `${parts[0]}, ${parts[1]}` : parts[0];
+    // Capitalize words
+    street = street.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
-    return { prefix, street: streetName ? fullStreet.trim() : simpleAddress };
+
+    return { prefix, street };
 };
 
 
@@ -58,7 +74,6 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
     const mapRef = useRef<L.Map | null>(null);
     const markerRef = useRef<L.Marker | null>(null);
     
-    // Set default icon
     useEffect(() => {
         const iconDefault = L.icon({
             iconRetinaUrl: iconRetinaUrl.src,
@@ -73,7 +88,7 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
     }, []);
 
     useEffect(() => {
-        if (mapContainerRef.current && !mapRef.current) { // Only initialize map once
+        if (mapContainerRef.current && !mapRef.current) { 
             const map = L.map(mapContainerRef.current).setView(defaultCenter, 15);
             mapRef.current = map;
 
@@ -91,8 +106,9 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
                 }
 
                 try {
-                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
                     const data = await response.json();
+                    
                     if (data) {
                         const address = extractAddress(data);
                         if(address) {
@@ -105,7 +121,6 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
             });
         }
 
-        // Cleanup function to destroy the map instance
         return () => {
             if (mapRef.current) {
                 mapRef.current.remove();
