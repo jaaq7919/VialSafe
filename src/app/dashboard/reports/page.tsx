@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Loader2, FileDown, Calendar as CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
-import { initialAccidents, Accident, causeLabels, typeLabels } from "@/app/dashboard/accidents/page";
+import { type Accident, causeLabels, typeLabels, getAccidents } from "@/app/dashboard/accidents/page";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
@@ -36,14 +36,15 @@ export default function ReportsPage() {
         setSelectedCauses(prev => prev.includes(cause) ? prev.filter(c => c !== cause) : [...prev, cause]);
     }
 
-    const handleGenerateReport = () => {
+    const handleGenerateReport = async () => {
         setIsLoading(true);
         setReportData(null);
         
-        // Simulate generation
-        setTimeout(() => {
-            const filteredAccidents = initialAccidents.filter(accident => {
-                const accidentDate = new Date(accident.date);
+        try {
+            const allAccidents = await getAccidents();
+            
+            const filteredAccidents = allAccidents.filter(accident => {
+                const accidentDate = accident.dateTime.toDate();
                 const from = dateFilter?.from;
                 const to = dateFilter?.to;
 
@@ -60,34 +61,50 @@ export default function ReportsPage() {
                 types: selectedTypes.map(t => typeLabels[t]).join(', ') || 'Todos',
                 causes: selectedCauses.map(c => causeLabels[c]).join(', ') || 'Todas',
             });
+        } catch (error) {
+            console.error("Error generating report:", error);
+            toast({
+                variant: "destructive",
+                title: "Error al Generar Reporte",
+                description: "No se pudieron obtener los datos de accidentes.",
+            });
+        } finally {
             setIsLoading(false);
-        }, 1500);
+        }
     }
 
     const handleDownloadCsv = () => {
         if (!reportData) return;
 
         let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Ubicacion,Fecha,Hora,Tipo,Causa,Estado del Cruce,Observaciones\n"; // Header
+        csvContent += "Ubicacion,Fecha,Hora,Tipo,Causa,Estado del Cruce,Observaciones,Latitud,Longitud\n"; // Header
 
         reportData.forEach(row => {
             const rowArray = [
-                `"${row.location}"`,
-                `"${format(row.date, 'yyyy-MM-dd')}"`,
-                `"${row.time}"`,
+                `"${row.addressPrefix} ${row.address}"`,
+                `"${format(row.dateTime.toDate(), 'yyyy-MM-dd')}"`,
+                `"${format(row.dateTime.toDate(), 'HH:mm')}"`,
                 `"${typeLabels[row.accidentType]}"`,
                 `"${causeLabels[row.cause]}"`,
                 `"${row.crossingStatus}"`,
-                `"${row.observations || ''}"`
+                `"${row.observations || ''}"`,
+                `"${row.latitude}"`,
+                `"${row.longitude}"`,
             ];
             csvContent += rowArray.join(",") + "\n";
         });
         
-        console.log("Generated CSV data:", csvContent);
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `reporte_accidentes_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         
         toast({
-            title: "Reporte Generado",
-            description: "La descarga del archivo CSV ha comenzado (simulación).",
+            title: "Reporte Descargado",
+            description: "El archivo CSV ha sido generado exitosamente.",
         });
     }
 
@@ -229,8 +246,8 @@ export default function ReportsPage() {
                                 {reportData.length > 0 ? (
                                     reportData.map((accident) => (
                                         <TableRow key={accident.id}>
-                                            <TableCell className="font-medium">{accident.location}</TableCell>
-                                            <TableCell>{format(accident.date, 'dd/MM/yyyy')} {accident.time}</TableCell>
+                                            <TableCell className="font-medium">{accident.addressPrefix} {accident.address}</TableCell>
+                                            <TableCell>{format(accident.dateTime.toDate(), 'dd/MM/yyyy HH:mm')}</TableCell>
                                             <TableCell>{typeLabels[accident.accidentType] || 'N/A'}</TableCell>
                                             <TableCell>{causeLabels[accident.cause] || 'N/A'}</TableCell>
                                         </TableRow>

@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import type { DateRange } from "react-day-picker";
 import { analyzeCriticalZones, type AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones";
+import { useToast } from "@/hooks/use-toast";
 
 const Heatmap = dynamic(() => import('@/components/client/heatmap'), {
     ssr: false,
@@ -42,6 +43,7 @@ const typeLabels: { [key: string]: string } = {
 
 
 export default function AnalysisPage() {
+    const { toast } = useToast();
     const [isLoading, setIsLoading] = React.useState(false);
     const [analysisResult, setAnalysisResult] = React.useState<AnalyzeCriticalZonesOutput | null>(null);
     const [error, setError] = React.useState<string | null>(null);
@@ -67,7 +69,14 @@ export default function AnalysisPage() {
         try {
             const allAccidents = await getAccidents();
             
+            if (allAccidents.length === 0) {
+                 setError("No hay accidentes registrados en la base de datos para analizar. Registre algunos primero.");
+                 setIsLoading(false);
+                 return;
+            }
+
             const filteredAccidents = allAccidents.filter(accident => {
+                if (!accident.dateTime) return false;
                 const accidentDate = accident.dateTime.toDate();
                 const from = dateFilter?.from;
                 const to = dateFilter?.to;
@@ -85,17 +94,19 @@ export default function AnalysisPage() {
                  return;
             }
 
-            const headers = "ubicacion,fecha,hora,tipo,causa,estado_cruce,observaciones";
+            const headers = "ubicacion,fecha,hora,tipo,causa,estado_cruce,observaciones,latitud,longitud";
             const csvData = filteredAccidents.map(acc => {
                 const accDate = acc.dateTime.toDate();
                 return [
-                    `"${acc.location}"`,
+                    `"${acc.addressPrefix} ${acc.address}"`,
                     `"${format(accDate, 'yyyy-MM-dd')}"`,
                     `"${format(accDate, 'HH:mm')}"`,
                     `"${acc.accidentType}"`,
                     `"${acc.cause}"`,
                     `"${acc.crossingStatus}"`,
-                    `"${acc.observations || ''}"`
+                    `"${acc.observations || ''}"`,
+                    `"${acc.latitude}"`,
+                    `"${acc.longitude}"`
                 ].join(',');
             }).join('\\n');
             const historicalAccidentData = `${headers}\\n${csvData}`;
@@ -113,24 +124,20 @@ export default function AnalysisPage() {
                  setError("La IA no identificó zonas críticas con los filtros seleccionados. Los datos no superan los umbrales de criticidad.");
             } else {
                  setAnalysisResult(result);
-                 // Simulate coordinates for heatmap based on mock accident locations
-                 const locationCoords: { [key: string]: [number, number] } = {
-                    'Carrera 7 con Calle 11': [3.4206, -76.3217],
-                    'Salida a Palmira, Cerca de la bomba': [3.4150, -76.3150],
-                    'Frente al parque principal': [3.4258, -76.3245],
-                    'Calle 8 con Carrera 4': [3.4230, -76.3260],
-                 };
-                 
-                 const heatMapPoints = filteredAccidents.map(acc => {
-                     const coords = locationCoords[acc.location] || [3.42, -76.32]; // Default coords
-                     return [coords[0], coords[1], 0.5] as [number, number, number]; // Lat, Lng, Intensity
-                 });
+                 const heatMapPoints = filteredAccidents
+                    .filter(acc => acc.latitude && acc.longitude)
+                    .map(acc => [acc.latitude, acc.longitude, 0.5] as [number, number, number]);
                  setMapData(heatMapPoints);
             }
 
         } catch (e) {
             console.error(e);
             setError("Ocurrió un error inesperado al contactar al servicio de IA. Por favor, intente de nuevo más tarde.");
+            toast({
+                variant: "destructive",
+                title: "Error de IA",
+                description: "No se pudo completar el análisis. Verifique la consola para más detalles.",
+            });
         } finally {
             setIsLoading(false);
         }

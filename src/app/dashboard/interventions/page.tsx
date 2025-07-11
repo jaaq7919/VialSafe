@@ -7,9 +7,9 @@ import { Loader2, Lightbulb, TrafficCone, OctagonAlert, Signal } from "lucide-re
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { suggestRoadInterventions, type SuggestRoadInterventionsOutput } from '@/ai/flows/suggest-road-interventions';
 import { analyzeCriticalZones } from '@/ai/flows/analyze-critical-zones';
-import { initialAccidents } from '@/app/dashboard/accidents/page';
+import { getAccidents } from '@/services/accidents';
 import { format } from 'date-fns';
-
+import { useToast } from "@/hooks/use-toast";
 
 const interventionIcons: { [key: string]: React.ElementType } = {
     'semáforo': Signal,
@@ -36,6 +36,7 @@ const getIconForIntervention = (intervention: string): React.ElementType => {
 
 
 export default function InterventionsPage() {
+    const { toast } = useToast();
     const [isLoading, setIsLoading] = React.useState(false);
     const [recommendations, setRecommendations] = React.useState<SuggestRoadInterventionsOutput['recommendations'] | null>(null);
     const [error, setError] = React.useState<string | null>(null);
@@ -47,22 +48,31 @@ export default function InterventionsPage() {
         setError(null);
         
         try {
-            // Step 1: Prepare data for analysis (using the full dataset for context)
-            const headers = "ubicacion,fecha,hora,tipo,causa,estado_cruce,observaciones";
-            const csvData = initialAccidents.map(acc => {
+            const allAccidents = await getAccidents();
+            
+            if (allAccidents.length === 0) {
+                setError("No hay accidentes registrados para analizar. Agregue algunos datos primero.");
+                setIsLoading(false);
+                return;
+            }
+
+            const headers = "ubicacion,fecha,hora,tipo,causa,estado_cruce,observaciones,latitud,longitud";
+            const csvData = allAccidents.map(acc => {
+                const accDate = acc.dateTime.toDate();
                 return [
-                    `"${acc.location}"`,
-                    `"${format(new Date(acc.date), 'yyyy-MM-dd')}"`,
-                    `"${acc.time}"`,
+                    `"${acc.addressPrefix} ${acc.address}"`,
+                    `"${format(accDate, 'yyyy-MM-dd')}"`,
+                    `"${format(accDate, 'HH:mm')}"`,
                     `"${acc.accidentType}"`,
                     `"${acc.cause}"`,
                     `"${acc.crossingStatus}"`,
-                    `"${acc.observations || ''}"`
+                    `"${acc.observations || ''}"`,
+                    `"${acc.latitude}"`,
+                    `"${acc.longitude}"`
                 ].join(',');
             }).join('\\n');
             const historicalAccidentData = `${headers}\\n${csvData}`;
 
-            // Step 2: Call the critical zones analysis to get context for the AI
             const analysisResult = await analyzeCriticalZones({
                 historicalAccidentData,
                 criteria: 'Identificar las 3 zonas con mayor número de accidentes para priorizar las recomendaciones.',
@@ -74,7 +84,6 @@ export default function InterventionsPage() {
                 return;
             }
 
-            // Step 3: Call the interventions suggestion flow with the analysis results
             const interventionsResult = await suggestRoadInterventions({
                 accidentData: historicalAccidentData,
                 criticalZoneAnalysis: JSON.stringify(analysisResult),
@@ -89,6 +98,11 @@ export default function InterventionsPage() {
         } catch (e) {
              console.error(e);
              setError("Ocurrió un error inesperado al contactar al servicio de IA. Por favor, intente de nuevo más tarde.");
+             toast({
+                variant: "destructive",
+                title: "Error de IA",
+                description: "No se pudieron generar las sugerencias. Verifique la consola para más detalles.",
+            });
         } finally {
             setIsLoading(false);
         }

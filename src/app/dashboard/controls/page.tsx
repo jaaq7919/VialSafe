@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, Lightbulb, Wind, Beer, FileText, OctagonAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { suggestControlPosts, type SuggestControlPostsOutput } from '@/ai/flows/suggest-control-posts';
-import { initialAccidents } from '@/app/dashboard/accidents/page';
+import { getAccidents } from '@/services/accidents';
 import { format } from 'date-fns';
+import { useToast } from "@/hooks/use-toast";
 
 const controlIcons: { [key: string]: React.ElementType } = {
     'velocidad': Wind,
@@ -30,6 +31,7 @@ const getIconForControl = (controlType: string): React.ElementType => {
 
 
 export default function ControlsPage() {
+    const { toast } = useToast();
     const [isLoading, setIsLoading] = React.useState(false);
     const [recommendations, setRecommendations] = React.useState<SuggestControlPostsOutput['recommendations'] | null>(null);
     const [error, setError] = React.useState<string | null>(null);
@@ -40,16 +42,27 @@ export default function ControlsPage() {
         setError(null);
         
         try {
-            const headers = "ubicacion,fecha,hora,tipo,causa,estado_cruce,observaciones";
-            const csvData = initialAccidents.map(acc => {
+            const allAccidents = await getAccidents();
+
+            if (allAccidents.length === 0) {
+                setError("No hay accidentes registrados para analizar. Agregue algunos datos primero.");
+                setIsLoading(false);
+                return;
+            }
+
+            const headers = "ubicacion,fecha,hora,tipo,causa,estado_cruce,observaciones,latitud,longitud";
+            const csvData = allAccidents.map(acc => {
+                const accDate = acc.dateTime.toDate();
                 return [
-                    `"${acc.location}"`,
-                    `"${format(new Date(acc.date), 'yyyy-MM-dd')}"`,
-                    `"${acc.time}"`,
+                    `"${acc.addressPrefix} ${acc.address}"`,
+                    `"${format(accDate, 'yyyy-MM-dd')}"`,
+                    `"${format(accDate, 'HH:mm')}"`,
                     `"${acc.accidentType}"`,
                     `"${acc.cause}"`,
                     `"${acc.crossingStatus}"`,
-                    `"${acc.observations || ''}"`
+                    `"${acc.observations || ''}"`,
+                    `"${acc.latitude}"`,
+                    `"${acc.longitude}"`
                 ].join(',');
             }).join('\\n');
             const historicalAccidentData = `${headers}\\n${csvData}`;
@@ -67,6 +80,11 @@ export default function ControlsPage() {
         } catch (e) {
              console.error(e);
              setError("Ocurrió un error inesperado al contactar al servicio de IA. Por favor, intente de nuevo más tarde.");
+             toast({
+                variant: "destructive",
+                title: "Error de IA",
+                description: "No se pudo generar la recomendación. Verifique la consola para más detalles.",
+            });
         } finally {
             setIsLoading(false);
         }
