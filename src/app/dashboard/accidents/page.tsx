@@ -60,7 +60,12 @@ import React, { useMemo, useEffect, useState, useCallback } from "react";
 import type { DateRange } from "react-day-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { getAccidents, addAccident, updateAccident, deleteAccident, type Accident } from '@/services/accidents';
-import LocationPicker from '@/components/client/location-picker';
+import dynamic from 'next/dynamic';
+
+const LocationPicker = dynamic(() => import('@/components/client/location-picker'), {
+    ssr: false,
+    loading: () => <div className="h-[400px] w-full rounded-md bg-muted flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+});
 
 
 const addressPrefixes = [
@@ -595,3 +600,5 @@ export default function AccidentsPage() {
         </>
     );
 }
+
+    
