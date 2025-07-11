@@ -1,16 +1,11 @@
 "use client";
 
 import 'leaflet/dist/leaflet.css';
-import 'leaflet.heat';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import React, { useEffect } from 'react';
-import type L from 'leaflet';
 
-// Extend the L (Leaflet) namespace to include the heatLayer type
-declare module 'leaflet' {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  export function heatLayer(latlngs: any[], options?: any): any;
-}
+// leaflet.heat depends on the global L object, so we need to handle it carefully
+// We will import it dynamically inside a useEffect hook.
 
 interface HeatmapLayerProps {
   data: [number, number, number][] | null;
@@ -20,7 +15,11 @@ const HeatmapLayer: React.FC<HeatmapLayerProps> = ({ data }) => {
   const map = useMap();
 
   useEffect(() => {
-    // Clear existing heat layers
+    // Dynamically import leaflet and leaflet.heat only on the client side
+    const L = require('leaflet');
+    require('leaflet.heat');
+
+    // Clear existing heat layers to avoid duplication on re-render
     map.eachLayer((layer) => {
       if ((layer as any)._heat) {
         map.removeLayer(layer);
@@ -28,6 +27,7 @@ const HeatmapLayer: React.FC<HeatmapLayerProps> = ({ data }) => {
     });
 
     if (data && data.length > 0) {
+      // Extend the L (Leaflet) namespace to include the heatLayer type for TypeScript
       (L as any).heatLayer(data, {
           radius: 25,
           blur: 15,
