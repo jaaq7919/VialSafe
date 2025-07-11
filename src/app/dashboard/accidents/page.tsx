@@ -63,29 +63,31 @@ import { getAccidents, addAccident, updateAccident, deleteAccident, type Acciden
 
 const addressPrefixes = [
     { value: 'CLL', label: 'CLL - Calle' },
-    { value: 'CRA', label: 'CRA - Carrera' },
-    { value: 'AV', label: 'AV - Avenida' },
+    { value: 'CRA', label: 'CRA / CR - Carrera' },
+    { value: 'AV', label: 'AV / AVE - Avenida' },
     { value: 'DG', label: 'DG - Diagonal' },
-    { value: 'TR', label: 'TR - Transversal' },
-    { value: 'CT', label: 'CT - Circular' },
+    { value: 'TR', label: 'TR / TRV - Transversal' },
+    { value: 'CT', label: 'CT / CCT - Circunvalar' },
     { value: 'AUT', label: 'AUT - Autopista' },
     { value: 'KM', label: 'KM - Kilómetro' },
+    { value: 'TV', label: 'TV - Transversal' },
     { value: 'AC', label: 'AC - Avenida Calle' },
     { value: 'AK', label: 'AK - Avenida Carrera' },
-    { value: 'BLV', label: 'BLV - Bulevar' },
+    { value: 'BLV', label: 'BLV / BV - Bulevar' },
     { value: 'PJE', label: 'PJE - Pasaje' },
     { value: 'PSJ', label: 'PSJ - Paseo' },
-    { value: 'PLZ', label: 'PLZ - Plaza' },
+    { value: 'PLZ', label: 'PLZ / PLAZ - Plaza' },
     { value: 'CL', label: 'CL - Calle (corta)' },
-    { value: 'CA', label: 'CA - Camino' },
+    { value: 'CA', label: 'CA / CAM - Camino' },
+    { value: 'CARR', label: 'CARR - Carrera (larga)' },
     { value: 'MZ', label: 'MZ - Manzana' },
-    { value: 'LT', label: 'LT - Lote' },
+    { value: 'LT', label: 'LT / LOTE - Lote' },
     { value: 'URB', label: 'URB - Urbanización' },
     { value: 'INT', label: 'INT - Interior' },
-    { value: 'ET', label: 'ET - Etapa' },
-    { value: 'TO', label: 'TO - Torre' },
-    { value: 'APT', label: 'APT - Apartamento' },
-    { value: 'ED', label: 'ED - Edificio' },
+    { value: 'ET', label: 'ET / ETAPA - Etapa' },
+    { value: 'TO', label: 'TO / TORRE - Torre' },
+    { value: 'APT', label: 'APT / APTO - Apartamento' },
+    { value: 'ED', label: 'ED / EDIF - Edificio' },
     { value: 'ZN', label: 'ZN - Zona' },
 ];
 
@@ -580,3 +582,5 @@ export default function AccidentsPage() {
         </>
     );
 }
+
+    
