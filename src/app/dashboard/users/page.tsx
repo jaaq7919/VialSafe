@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from "react";
@@ -62,7 +63,7 @@ const userSchema = z.object({
 
 type User = z.infer<typeof userSchema> & {
     id: string;
-    avatar: string;
+    avatarUrl: string;
     initials: string;
 };
 
@@ -75,7 +76,7 @@ const initialUsers: User[] = [
     phone: "3101234567",
     email: "carlos.vargas@centinelavial.com",
     role: "Administrador",
-    avatar: "https://i.pravatar.cc/150?u=carlos",
+    avatarUrl: "https://i.pravatar.cc/150?u=carlos",
     initials: "CV",
   },
   {
@@ -86,7 +87,7 @@ const initialUsers: User[] = [
     phone: "3111234567",
     email: "sofia.reyes@centinelavial.com",
     role: "Analista de Tráfico",
-    avatar: "https://i.pravatar.cc/150?u=sofia",
+    avatarUrl: "https://i.pravatar.cc/150?u=sofia",
     initials: "SR",
   },
   {
@@ -97,7 +98,7 @@ const initialUsers: User[] = [
     phone: "3121234567",
     email: "mateo.diaz@centinelavial.com",
     role: "Operador de Tráfico",
-    avatar: "https://i.pravatar.cc/150?u=mateo",
+    avatarUrl: "https://i.pravatar.cc/150?u=mateo",
     initials: "MD",
   },
   {
@@ -108,7 +109,7 @@ const initialUsers: User[] = [
     phone: "3131234567",
     email: "valentina.castillo@centinelavial.com",
     role: "Operador de Tráfico",
-    avatar: "https://i.pravatar.cc/150?u=valentina",
+    avatarUrl: "https://i.pravatar.cc/150?u=valentina",
     initials: "VC",
   },
 ];
@@ -169,12 +170,12 @@ export default function UsersPage() {
   
   function onSubmit(values: z.infer<typeof userSchema>) {
     const initials = (values.firstName[0] + (values.lastName[0] || '')).toUpperCase();
-    const avatar = `https://i.pravatar.cc/150?u=${values.email}`;
+    const avatarUrl = `https://i.pravatar.cc/150?u=${values.email}`;
     const name = `${values.firstName} ${values.lastName}`;
     
     if (editingUser) {
       // Update user
-      setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...values, avatar, initials } : u));
+      setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...values, avatarUrl, initials } : u));
       toast({
         title: "Usuario Actualizado",
         description: `Los datos de ${name} han sido actualizados.`,
@@ -184,7 +185,7 @@ export default function UsersPage() {
       const newUser: User = {
         id: new Date().getTime().toString(),
         ...values,
-        avatar,
+        avatarUrl,
         initials,
       };
       setUsers([newUser, ...users]);
@@ -232,7 +233,7 @@ export default function UsersPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarImage src={user.avatar} alt={`${user.firstName} ${user.lastName}`} />
+                        <AvatarImage src={user.avatarUrl} alt={`${user.firstName} ${user.lastName}`} />
                         <AvatarFallback>{user.initials}</AvatarFallback>
                       </Avatar>
                       <div>
