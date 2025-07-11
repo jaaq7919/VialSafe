@@ -1,8 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -53,54 +52,73 @@ const extractAddress = (osmData: any): { prefix: string, street: string } | null
     return { prefix, street: streetName ? fullStreet.trim() : simpleAddress };
 };
 
-const MapController = ({ onLocationSelect }: LocationPickerProps) => {
-    const [marker, setMarker] = useState<L.LatLng | null>(null);
-    
-    const handleMapClick = useCallback(async (latlng: L.LatLng) => {
-        setMarker(latlng);
-        try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}`);
-            const data = await response.json();
-            if (data) {
-                const address = extractAddress(data);
-                if(address) {
-                    onLocationSelect(address);
-                }
-            }
-        } catch (error) {
-            console.error("Error fetching address from Nominatim:", error);
-        }
-    }, [onLocationSelect]);
-
-    useMapEvents({
-        click(e) {
-            handleMapClick(e.latlng);
-        },
-    });
-
-    return marker ? <Marker position={marker}></Marker> : null;
-}
-
 
 export default function LocationPicker({ onLocationSelect }: LocationPickerProps) {
+    const mapContainerRef = useRef<HTMLDivElement>(null);
+    const mapRef = useRef<L.Map | null>(null);
+    const markerRef = useRef<L.Marker | null>(null);
+    
+    // Set default icon
     useEffect(() => {
-        delete (L.Icon.Default.prototype as any)._getIconUrl;
-        L.Icon.Default.mergeOptions({
+        const iconDefault = L.icon({
             iconRetinaUrl: iconRetinaUrl.src,
             iconUrl: iconUrl.src,
             shadowUrl: shadowUrl.src,
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
         });
+        L.Marker.prototype.options.icon = iconDefault;
     }, []);
 
+    useEffect(() => {
+        if (mapContainerRef.current && !mapRef.current) { // Only initialize map once
+            const map = L.map(mapContainerRef.current).setView(defaultCenter, 15);
+            mapRef.current = map;
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            map.on('click', async (e: L.LeafletMouseEvent) => {
+                const { lat, lng } = e.latlng;
+
+                if (markerRef.current) {
+                    markerRef.current.setLatLng(e.latlng);
+                } else {
+                    markerRef.current = L.marker(e.latlng).addTo(map);
+                }
+
+                try {
+                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                    const data = await response.json();
+                    if (data) {
+                        const address = extractAddress(data);
+                        if(address) {
+                            onLocationSelect(address);
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error fetching address from Nominatim:", error);
+                }
+            });
+        }
+
+        // Cleanup function to destroy the map instance
+        return () => {
+            if (mapRef.current) {
+                mapRef.current.remove();
+                mapRef.current = null;
+            }
+        };
+    }, [onLocationSelect]);
+
     return (
-        <div className="h-[400px] w-full rounded-md overflow-hidden bg-muted">
-            <MapContainer center={defaultCenter} zoom={15} style={{ height: '100%', width: '100%' }}>
-                <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-                <MapController onLocationSelect={onLocationSelect} />
-            </MapContainer>
+        <div 
+            ref={mapContainerRef} 
+            className="h-[400px] w-full rounded-md overflow-hidden bg-muted"
+        >
         </div>
     );
 }
