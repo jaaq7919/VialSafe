@@ -13,6 +13,8 @@ export type AccidentFormData = {
   cause: string;
   crossingStatus: string;
   observations?: string;
+  latitude: number;
+  longitude: number;
 };
 
 // Este tipo representa la estructura del documento en Firestore.
@@ -20,12 +22,14 @@ export type Accident = {
   id?: string;
   addressPrefix: string;
   address: string;
-  location: string; // Combined field for backwards compatibility and easy search
+  location: string; 
   dateTime: Timestamp;
   accidentType: string;
   cause: string;
   crossingStatus: string;
   observations?: string;
+  latitude: number;
+  longitude: number;
   createdAt: Timestamp;
 };
 
@@ -50,7 +54,9 @@ export async function addAccident(data: {
   accidentType: string;
   cause: string;
   crossingStatus: string;
-  observations?: string
+  observations?: string;
+  latitude: number;
+  longitude: number;
 }) {
   try {
     const docRef = await addDoc(accidentsCollection, {
@@ -74,7 +80,9 @@ export async function updateAccident(id: string, data: {
   accidentType: string;
   cause: string;
   crossingStatus: string;
-  observations?: string
+  observations?: string;
+  latitude: number;
+  longitude: number;
 }) {
   const accidentDoc = doc(db, 'accidents', id);
   try {

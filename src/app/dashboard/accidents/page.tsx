@@ -52,7 +52,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, Loader2, MoreHorizontal, Trash2, FilePenLine } from "lucide-react";
+import { Calendar as CalendarIcon, Loader2, MoreHorizontal, Trash2, FilePenLine, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
@@ -107,6 +107,11 @@ const formSchema = z.object({
   cause: z.string({ required_error: "Seleccione una causa probable." }),
   crossingStatus: z.string({ required_error: "Seleccione el estado del cruce." }),
   observations: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+}).refine(data => data.latitude !== undefined && data.longitude !== undefined, {
+    message: "Debe seleccionar una ubicación en el mapa.",
+    path: ["address"], 
 });
 
 
@@ -204,6 +209,12 @@ export default function AccidentsPage() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true);
         try {
+            if (values.latitude === undefined || values.longitude === undefined) {
+                form.setError("address", { type: "manual", message: "Por favor, seleccione un punto en el mapa." });
+                setIsSubmitting(false);
+                return;
+            }
+            
             const [hours, minutes] = values.time.split(':').map(Number);
             const dateTime = new Date(values.date);
             dateTime.setHours(hours, minutes);
@@ -211,7 +222,9 @@ export default function AccidentsPage() {
             const accidentData = {
                 ...values,
                 location: `${values.addressPrefix} ${values.address}`,
-                dateTime
+                dateTime,
+                latitude: values.latitude,
+                longitude: values.longitude,
             };
             
             if (editingAccidentId) {
@@ -228,7 +241,7 @@ export default function AccidentsPage() {
                     description: "El nuevo reporte de accidente se ha guardado.",
                 });
             }
-            form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, accidentType: undefined, cause: undefined, crossingStatus: undefined, observations: "" });
+            form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, accidentType: undefined, cause: undefined, crossingStatus: undefined, observations: "", latitude: undefined, longitude: undefined });
             fetchAccidents();
 
         } catch (error) {
@@ -257,6 +270,8 @@ export default function AccidentsPage() {
             cause: accident.cause,
             crossingStatus: accident.crossingStatus,
             observations: accident.observations,
+            latitude: accident.latitude,
+            longitude: accident.longitude,
         });
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
@@ -281,7 +296,7 @@ export default function AccidentsPage() {
     
     const handleCancelEdit = () => {
         setEditingAccidentId(null);
-        form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, accidentType: undefined, cause: undefined, crossingStatus: undefined, observations: "" });
+        form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, accidentType: undefined, cause: undefined, crossingStatus: undefined, observations: "", latitude: undefined, longitude: undefined });
     }
 
     const handleClearFilters = () => {
@@ -303,10 +318,13 @@ export default function AccidentsPage() {
         setAccidentIdToDelete(null);
     };
     
-    const handleLocationSelect = useCallback((address: { prefix: string, street: string }) => {
-        const matchingPrefix = addressPrefixes.find(p => p.value.toUpperCase() === address.prefix.toUpperCase());
+    const handleLocationSelect = useCallback((location: { prefix: string, street: string, lat: number, lng: number }) => {
+        const matchingPrefix = addressPrefixes.find(p => p.value.toUpperCase() === location.prefix.toUpperCase());
         form.setValue('addressPrefix', matchingPrefix ? matchingPrefix.value : 'CLL', { shouldValidate: true });
-        form.setValue('address', address.street, { shouldValidate: true });
+        form.setValue('address', location.street, { shouldValidate: true });
+        form.setValue('latitude', location.lat, { shouldValidate: true });
+        form.setValue('longitude', location.lng, { shouldValidate: true });
+        form.clearErrors("address");
     }, [form]);
 
     return (
@@ -600,5 +618,3 @@ export default function AccidentsPage() {
         </>
     );
 }
-
-    

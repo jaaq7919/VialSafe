@@ -10,13 +10,13 @@ import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 
 interface LocationPickerProps {
-  onLocationSelect: (address: { prefix: string, street: string }) => void;
+  onLocationSelect: (location: { prefix: string, street: string, lat: number, lng: number }) => void;
 }
 
 const defaultCenter: L.LatLngExpression = [3.423, -76.324];
 
 const addressPrefixMap: { [key: string]: string[] } = {
-    CLL: ['calle', 'cll'],
+    CLL: ['calle', 'cll', 'cl'],
     CRA: ['carrera', 'cra', 'cr', 'carr'],
     AV: ['avenida', 'av', 'ave'],
     DG: ['diagonal', 'dg'],
@@ -25,45 +25,44 @@ const addressPrefixMap: { [key: string]: string[] } = {
     KM: ['kilómetro', 'km'],
     AC: ['avenida calle', 'ac'],
     AK: ['avenida carrera', 'ak'],
+    BLV: ['bulevar', 'blv', 'bv'],
 };
 
 const extractAddress = (osmData: any): { prefix: string, street: string } | null => {
-    if (!osmData || !osmData.display_name) return null;
+    if (!osmData || !osmData.address) return null;
 
-    const displayName = osmData.display_name.toLowerCase();
-    const parts = displayName.split(',').map(p => p.trim());
-    
-    // Find parts that look like streets/avenues
-    const streetParts = parts.filter(p => /\d/.test(p) && (p.includes('calle') || p.includes('carrera') || p.includes('avenida')));
+    const { road, highway, suburb, house_number, neighbourhood } = osmData.address;
 
-    let prefix = 'CLL'; 
-    let street = parts[0] || ''; 
-    
-    if (streetParts.length >= 1) {
-        street = streetParts.join(' con ');
-        // Clean up street names
-        street = street.replace(/calle/g, 'Calle')
-                       .replace(/carrera/g, 'Carrera')
-                       .replace(/avenida/g, 'Avenida')
-                       .replace(/\s+/g, ' ').trim();
-        
-        // Determine prefix based on the first street part
-        const firstStreet = streetParts[0];
-        for (const [key, keywords] of Object.entries(addressPrefixMap)) {
-            if (keywords.some(kw => firstStreet.includes(kw))) {
-                prefix = key;
-                break;
-            }
+    let mainStreet = road || highway || neighbourhood || suburb || '';
+    if (!mainStreet) return null;
+
+    let prefix = 'CLL'; // Default prefix
+
+    for (const [key, keywords] of Object.entries(addressPrefixMap)) {
+        if (keywords.some(kw => mainStreet.toLowerCase().includes(kw))) {
+            prefix = key;
+            break;
         }
-    } else if (osmData.address) {
-        const { road, highway, suburb } = osmData.address;
-        street = road || highway || suburb || street;
-        if (highway) prefix = 'CRA';
     }
 
+    // Clean up the street name
+    mainStreet = mainStreet.replace(/^(calle|carrera|avenida|diagonal|transversal|autopista|kilómetro|bulevar|cll|cra|cr|av|ave|dg|tr|trv|tv|aut|km|ac|ak|blv|bv)\s+/i, '').trim();
+    if(house_number) {
+        mainStreet = `${mainStreet} #${house_number}`;
+    }
+
+    // Attempt to find intersecting street if available in display_name
+    const displayName = osmData.display_name.toLowerCase();
+    const parts = displayName.split(',').map(p => p.trim());
+    const streetParts = parts.filter(p => /\d/.test(p) && (p.includes('calle') || p.includes('carrera') || p.includes('avenida')));
+    
+    let street = mainStreet;
+    if(streetParts.length > 1) {
+       street = streetParts.join(' con ').replace(/calle/g, 'Calle').replace(/carrera/g, 'Carrera').replace(/\s+/g, ' ').trim();
+    }
+    
     // Capitalize words
     street = street.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-
 
     return { prefix, street };
 };
@@ -112,7 +111,7 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
                     if (data) {
                         const address = extractAddress(data);
                         if(address) {
-                            onLocationSelect(address);
+                            onLocationSelect({ ...address, lat, lng });
                         }
                     }
                 } catch (error) {
