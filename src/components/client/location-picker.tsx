@@ -53,29 +53,9 @@ const extractAddress = (osmData: any): { prefix: string, street: string } | null
     return { prefix, street: streetName ? fullStreet.trim() : simpleAddress };
 };
 
-const MapEvents = ({ onMapClick }: { onMapClick: (latlng: L.LatLng) => void }) => {
-  useMapEvents({
-    click(e) {
-      onMapClick(e.latlng);
-    },
-  });
-  return null;
-};
-
-export default function LocationPicker({ onLocationSelect }: LocationPickerProps) {
+const MapController = ({ onLocationSelect }: LocationPickerProps) => {
     const [marker, setMarker] = useState<L.LatLng | null>(null);
-
-    useEffect(() => {
-        // This is a common workaround for a known issue with Webpack and Leaflet's default icon.
-        // It manually sets the paths for the marker icons.
-        delete (L.Icon.Default.prototype as any)._getIconUrl;
-        L.Icon.Default.mergeOptions({
-            iconRetinaUrl: iconRetinaUrl.src,
-            iconUrl: iconUrl.src,
-            shadowUrl: shadowUrl.src,
-        });
-    }, []);
-
+    
     const handleMapClick = useCallback(async (latlng: L.LatLng) => {
         setMarker(latlng);
         try {
@@ -92,6 +72,28 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
         }
     }, [onLocationSelect]);
 
+    useMapEvents({
+        click(e) {
+            handleMapClick(e.latlng);
+        },
+    });
+
+    return marker ? <Marker position={marker}></Marker> : null;
+}
+
+
+export default function LocationPicker({ onLocationSelect }: LocationPickerProps) {
+    useEffect(() => {
+        // This is a common workaround for a known issue with Webpack and Leaflet's default icon.
+        // It manually sets the paths for the marker icons.
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconRetinaUrl: iconRetinaUrl.src,
+            iconUrl: iconUrl.src,
+            shadowUrl: shadowUrl.src,
+        });
+    }, []);
+
     const displayMap = useMemo(
         () => (
             <MapContainer center={defaultCenter} zoom={15} style={{ height: '100%', width: '100%' }}>
@@ -99,25 +101,17 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
-                {marker && <Marker position={marker} />}
-                <MapEvents onMapClick={handleMapClick} />
+                <MapController onLocationSelect={onLocationSelect} />
             </MapContainer>
         ),
-        [handleMapClick, marker]
+        // By removing dependencies, we ensure this only runs once.
+        // The onLocationSelect function is passed down to the controller.
+        [onLocationSelect]
     );
-
-    // Due to SSR, MapContainer must only be rendered on the client.
-    // We can use a simple state to ensure it's client-side only.
-    const [isClient, setIsClient] = useState(false);
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
 
     return (
         <div className="h-[400px] w-full rounded-md overflow-hidden bg-muted">
-            {isClient ? displayMap : (
-                 <div className="flex h-full w-full items-center justify-center">Cargando mapa...</div>
-            )}
+            {displayMap}
         </div>
     );
 }
