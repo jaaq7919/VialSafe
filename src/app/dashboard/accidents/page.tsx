@@ -52,7 +52,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, Loader2, MoreHorizontal, Trash2, FilePenLine, MapPin } from "lucide-react";
+import { Calendar as CalendarIcon, Loader2, MoreHorizontal, Trash2, FilePenLine } from "lucide-react";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
@@ -61,7 +61,6 @@ import type { DateRange } from "react-day-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { getAccidents, addAccident, updateAccident, deleteAccident, type Accident } from '@/services/accidents';
 import LocationPicker from '@/components/client/location-picker';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 
 const addressPrefixes = [
@@ -149,7 +148,6 @@ export default function AccidentsPage() {
     
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [accidentIdToDelete, setAccidentIdToDelete] = useState<string | null>(null);
-    const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -159,13 +157,6 @@ export default function AccidentsPage() {
             observations: "",
         },
     });
-    
-    useEffect(() => {
-        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-        if (apiKey) {
-            setGoogleMapsApiKey(apiKey);
-        }
-    }, []);
 
     const fetchAccidents = useCallback(async () => {
         setIsLoading(true);
@@ -462,17 +453,7 @@ export default function AccidentsPage() {
                     </div>
                      <div className="space-y-4">
                         <label className="text-sm font-medium">Ubicar en el Mapa</label>
-                        {googleMapsApiKey ? (
-                            <LocationPicker onLocationSelect={handleLocationSelect} apiKey={googleMapsApiKey} />
-                        ) : (
-                           <Alert variant="destructive">
-                                <MapPin className="h-4 w-4" />
-                                <AlertTitle>Falta la clave de API de Google Maps</AlertTitle>
-                                <AlertDescription>
-                                    El mapa no se puede cargar. Por favor, agregue su `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` al archivo `.env` y reinicie el servidor.
-                                </AlertDescription>
-                           </Alert>
-                        )}
+                        <LocationPicker onLocationSelect={handleLocationSelect} />
                     </div>
                 </CardContent>
             </Card>

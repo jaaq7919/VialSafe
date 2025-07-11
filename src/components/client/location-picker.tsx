@@ -1,123 +1,118 @@
 "use client";
 
-import React, { useCallback, useState } from 'react';
-import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+import React, { useState, useEffect, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
-const containerStyle = {
-  width: '100%',
-  height: '400px',
-  borderRadius: '0.5rem',
-};
-
-// Default coordinates for Florida, Valle del Cauca
-const defaultCenter = {
-  lat: 3.423,
-  lng: -76.324
-};
-
-// Define address component types for geocoding response
-interface AddressComponent {
-  long_name: string;
-  short_name: string;
-  types: string[];
-}
-
-interface GeocodingResult {
-  address_components: AddressComponent[];
-  formatted_address: string;
-}
+// Fix for default icon issue with Leaflet in React
+import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import iconUrl from 'leaflet/dist/images/marker-icon.png';
+import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 
 interface LocationPickerProps {
   onLocationSelect: (address: { prefix: string, street: string }) => void;
-  apiKey: string;
 }
 
+// Default coordinates for Florida, Valle del Cauca
+const defaultCenter: L.LatLngExpression = [3.423, -76.324];
+
 const addressPrefixMap: { [key: string]: string } = {
-    'street_number': '',
-    'route': 'CLL',
-    'intersection': 'CRA',
-    'political': '',
-    'country': '',
-    'administrative_area_level_1': '',
-    'administrative_area_level_2': '',
-    'locality': '',
-    'postal_code': '',
-    'neighborhood': '',
+  road: 'CLL',
+  footway: 'CLL',
+  street: 'CLL',
+  path: 'CLL',
+  motorway: 'AUT',
+  highway: 'CRA',
 };
 
-const extractAddress = (place: GeocodingResult): { prefix: string, street: string } | null => {
-    if (!place.address_components) return null;
+const extractAddress = (osmData: any): { prefix: string, street: string } | null => {
+    if (!osmData.address) return null;
 
-    let streetName = '';
-    let streetNumber = '';
-    let route = '';
+    const { road, highway, footway, street, path, house_number, suburb } = osmData.address;
+    const streetName = road || highway || footway || street || path || '';
+    const addressType = Object.keys(osmData.address).find(key => 
+        ['road', 'highway', 'footway', 'street', 'path'].includes(key)
+    ) as keyof typeof addressPrefixMap | undefined;
     
-    // A simplified approach to find a common street name format
-    const routeComponent = place.address_components.find(c => c.types.includes('route'));
-    if (routeComponent) {
-        // Try to match common patterns like "Calle X" or "Carrera Y"
-        const match = routeComponent.long_name.match(/^(Calle|Carrera|Avenida|Transversal|Diagonal)\s*(.*)/i);
-        if (match) {
-            const prefixLookup: { [key: string]: string } = {
-                'calle': 'CLL',
-                'carrera': 'CRA',
-                'avenida': 'AV',
-                'transversal': 'TR',
-                'diagonal': 'DG',
-            };
-            const prefix = prefixLookup[match[1].toLowerCase()] || 'CLL';
-            const restOfAddress = match[2];
-            return { prefix, street: restOfAddress };
-        }
+    const prefix = addressType ? addressPrefixMap[addressType] : 'CLL';
+    
+    let fullStreet = streetName;
+    if (house_number) {
+        fullStreet += ` #${house_number}`;
     }
-    
-    // Fallback if no clear pattern is found, use formatted address minus city/country
-    const formatted = place.formatted_address.split(',')[0];
-    return { prefix: 'CLL', street: formatted || 'Dirección no encontrada' };
+    if (suburb && !streetName) {
+        fullStreet = suburb; // Fallback to suburb if no street name
+    }
+
+    // A simple heuristic to format Colombian-style addresses if possible
+    const parts = osmData.display_name.split(',');
+    const simpleAddress = parts.length > 2 ? `${parts[0]}, ${parts[1]}` : parts[0];
+
+    return { prefix, street: streetName ? fullStreet.trim() : simpleAddress };
 };
 
-
-export default function LocationPicker({ onLocationSelect, apiKey }: LocationPickerProps) {
-  const { isLoaded, loadError } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: apiKey
+const MapEvents = ({ onMapClick }: { onMapClick: (latlng: L.LatLng) => void }) => {
+  useMapEvents({
+    click(e) {
+      onMapClick(e.latlng);
+    },
   });
+  return null;
+};
 
-  const [marker, setMarker] = useState<google.maps.LatLngLiteral | null>(null);
+export default function LocationPicker({ onLocationSelect }: LocationPickerProps) {
+    const [marker, setMarker] = useState<L.LatLng | null>(null);
 
-  const handleMapClick = useCallback((event: google.maps.MapMouseEvent) => {
-    if (!event.latLng) return;
+    useEffect(() => {
+        // This is a common workaround for a known issue with Webpack and Leaflet's default icon.
+        // It manually sets the paths for the marker icons.
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconRetinaUrl: iconRetinaUrl.src,
+            iconUrl: iconUrl.src,
+            shadowUrl: shadowUrl.src,
+        });
+    }, []);
 
-    const lat = event.latLng.lat();
-    const lng = event.latLng.lng();
-    setMarker({ lat, lng });
-
-    // Use Geocoding API to get address
-    const geocoder = new window.google.maps.Geocoder();
-    geocoder.geocode({ location: { lat, lng } }, (results, status) => {
-      if (status === 'OK' && results && results[0]) {
-        const address = extractAddress(results[0]);
-        if(address) {
-            onLocationSelect(address);
+    const handleMapClick = useCallback(async (latlng: L.LatLng) => {
+        setMarker(latlng);
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latlng.lat}&lon=${latlng.lng}`);
+            const data = await response.json();
+            if (data) {
+                const address = extractAddress(data);
+                if(address) {
+                    onLocationSelect(address);
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching address from Nominatim:", error);
         }
-      } else {
-        console.error('Geocoder failed due to: ' + status);
-      }
-    });
-  }, [onLocationSelect]);
+    }, [onLocationSelect]);
 
-  if (loadError) {
-    return <div>Error al cargar el mapa. Verifique la clave de API de Google Maps.</div>;
-  }
+    // Due to SSR, MapContainer must only be rendered on the client.
+    // We can use a simple state to ensure it's client-side only.
+    const [isClient, setIsClient] = useState(false);
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
-  return isLoaded ? (
-    <GoogleMap
-      mapContainerStyle={containerStyle}
-      center={defaultCenter}
-      zoom={15}
-      onClick={handleMapClick}
-    >
-      {marker && <Marker position={marker} />}
-    </GoogleMap>
-  ) : <div className="h-[400px] w-full bg-muted rounded-md flex items-center justify-center">Cargando mapa...</div>;
+    return (
+        <div className="h-[400px] w-full rounded-md overflow-hidden bg-muted">
+            {isClient && (
+                <MapContainer center={defaultCenter} zoom={15} style={{ height: '100%', width: '100%' }}>
+                    <TileLayer
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    />
+                    {marker && <Marker position={marker} />}
+                    <MapEvents onMapClick={handleMapClick} />
+                </MapContainer>
+            )}
+             {!isClient && (
+                 <div className="flex h-full w-full items-center justify-center">Cargando mapa...</div>
+            )}
+        </div>
+    );
 }
