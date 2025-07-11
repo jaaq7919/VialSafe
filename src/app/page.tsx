@@ -1,14 +1,31 @@
+
+"use client";
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ShieldCheck, ArrowRight } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
 
 export default function LandingPage() {
+  const { user, loading } = useAuth();
+
   return (
     <div className="flex flex-col min-h-screen">
-      <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center">
+      <header className="container mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldCheck className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold text-foreground">Centinela Vial</h1>
+        </div>
+        <div>
+          {loading ? null : user ? (
+            <Button asChild>
+              <Link href="/dashboard">Ir al Panel</Link>
+            </Button>
+          ) : (
+            <Button asChild>
+              <Link href="/login">Iniciar Sesión</Link>
+            </Button>
+          )}
         </div>
       </header>
       <main className="flex-grow flex items-center">

@@ -1,5 +1,10 @@
-import React from "react";
+"use client";
+
+import React, { useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
+
 import {
   SidebarProvider,
   Sidebar,
@@ -8,9 +13,6 @@ import {
   SidebarFooter,
   SidebarTrigger,
   SidebarInset,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
 } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
@@ -22,7 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ShieldCheck, LogOut, Settings } from "lucide-react";
+import { ShieldCheck, LogOut, Settings, Loader2 } from "lucide-react";
 import { SidebarItems } from "@/components/client/sidebar-items";
 
 export default function DashboardLayout({
@@ -30,6 +32,28 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const { user, userProfile, loading, logout } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
+  };
+
   return (
     <SidebarProvider>
       <Sidebar side="left" variant="sidebar" collapsible="icon">
@@ -49,12 +73,12 @@ export default function DashboardLayout({
             <DropdownMenuTrigger asChild>
                 <div className="group-data-[collapsible=icon]:p-2 p-2.5 flex items-center gap-2.5 cursor-pointer rounded-md hover:bg-sidebar-accent">
                     <Avatar className="h-8 w-8">
-                        <AvatarImage src="https://i.pravatar.cc/150?u=carlos" alt="Admin" />
-                        <AvatarFallback>CV</AvatarFallback>
+                        <AvatarImage src={userProfile?.avatarUrl} alt={userProfile?.firstName || 'User'} />
+                        <AvatarFallback>{userProfile?.initials || 'CV'}</AvatarFallback>
                     </Avatar>
                     <div className="group-data-[collapsible=icon]:hidden flex flex-col items-start">
-                        <p className="text-sm font-medium">Carlos Vargas</p>
-                        <p className="text-xs text-muted-foreground">Administrador</p>
+                        <p className="text-sm font-medium">{userProfile?.firstName} {userProfile?.lastName}</p>
+                        <p className="text-xs text-muted-foreground">{userProfile?.role}</p>
                     </div>
                 </div>
             </DropdownMenuTrigger>
@@ -66,7 +90,7 @@ export default function DashboardLayout({
                     <span>Configuración</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Cerrar Sesión</span>
                 </DropdownMenuItem>
