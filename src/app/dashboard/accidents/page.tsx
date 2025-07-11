@@ -61,8 +61,37 @@ import type { DateRange } from "react-day-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { getAccidents, addAccident, updateAccident, deleteAccident, type Accident } from '@/services/accidents'
 
+const addressPrefixes = [
+    { value: 'CLL', label: 'CLL - Calle' },
+    { value: 'CRA', label: 'CRA - Carrera' },
+    { value: 'AV', label: 'AV - Avenida' },
+    { value: 'DG', label: 'DG - Diagonal' },
+    { value: 'TR', label: 'TR - Transversal' },
+    { value: 'CT', label: 'CT - Circular' },
+    { value: 'AUT', label: 'AUT - Autopista' },
+    { value: 'KM', label: 'KM - Kilómetro' },
+    { value: 'AC', label: 'AC - Avenida Calle' },
+    { value: 'AK', label: 'AK - Avenida Carrera' },
+    { value: 'BLV', label: 'BLV - Bulevar' },
+    { value: 'PJE', label: 'PJE - Pasaje' },
+    { value: 'PSJ', label: 'PSJ - Paseo' },
+    { value: 'PLZ', label: 'PLZ - Plaza' },
+    { value: 'CL', label: 'CL - Calle (corta)' },
+    { value: 'CA', label: 'CA - Camino' },
+    { value: 'MZ', label: 'MZ - Manzana' },
+    { value: 'LT', label: 'LT - Lote' },
+    { value: 'URB', label: 'URB - Urbanización' },
+    { value: 'INT', label: 'INT - Interior' },
+    { value: 'ET', label: 'ET - Etapa' },
+    { value: 'TO', label: 'TO - Torre' },
+    { value: 'APT', label: 'APT - Apartamento' },
+    { value: 'ED', label: 'ED - Edificio' },
+    { value: 'ZN', label: 'ZN - Zona' },
+];
+
 const formSchema = z.object({
-  location: z.string().min(3, "La ubicación debe tener al menos 3 caracteres."),
+  addressPrefix: z.string({ required_error: "Seleccione un prefijo." }),
+  address: z.string().min(3, "La dirección debe tener al menos 3 caracteres."),
   date: z.date({ required_error: "La fecha es obligatoria." }),
   time: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora no válido (HH:MM)."),
   accidentType: z.string({ required_error: "Seleccione un tipo de accidente." }),
@@ -119,7 +148,7 @@ export default function AccidentsPage() {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-            location: "",
+            address: "",
             time: "",
             observations: "",
         },
@@ -153,8 +182,10 @@ export default function AccidentsPage() {
             const from = dateFilter?.from;
             const to = dateFilter?.to;
 
+            const fullLocation = `${accident.addressPrefix} ${accident.address}`;
+
             const dateMatch = !from || (accidentDate >= from && (!to || accidentDate <= to));
-            const locationMatch = !locationFilter || accident.location.toLowerCase().includes(locationFilter.toLowerCase());
+            const locationMatch = !locationFilter || fullLocation.toLowerCase().includes(locationFilter.toLowerCase());
             const causeMatch = !causeFilter || accident.cause === causeFilter;
 
             return dateMatch && locationMatch && causeMatch;
@@ -171,6 +202,7 @@ export default function AccidentsPage() {
 
             const accidentData = {
                 ...values,
+                location: `${values.addressPrefix} ${values.address}`,
                 dateTime
             };
             
@@ -188,7 +220,7 @@ export default function AccidentsPage() {
                     description: "El nuevo reporte de accidente se ha guardado.",
                 });
             }
-            form.reset({ location: "", time: "", date: undefined, accidentType: undefined, cause: undefined, crossingStatus: undefined, observations: "" });
+            form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, accidentType: undefined, cause: undefined, crossingStatus: undefined, observations: "" });
             fetchAccidents(); // Refetch data
 
         } catch (error) {
@@ -209,7 +241,8 @@ export default function AccidentsPage() {
 
         const accidentDate = accident.dateTime.toDate();
         form.reset({
-            location: accident.location,
+            addressPrefix: accident.addressPrefix,
+            address: accident.address,
             date: accidentDate,
             time: format(accidentDate, 'HH:mm'),
             accidentType: accident.accidentType,
@@ -240,7 +273,7 @@ export default function AccidentsPage() {
     
     const handleCancelEdit = () => {
         setEditingAccidentId(null);
-        form.reset({ location: "", time: "", date: undefined, accidentType: undefined, cause: undefined, crossingStatus: undefined, observations: "" });
+        form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, accidentType: undefined, cause: undefined, crossingStatus: undefined, observations: "" });
     }
 
     const handleClearFilters = () => {
@@ -278,15 +311,31 @@ export default function AccidentsPage() {
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField control={form.control} name="location" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Ubicación</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Ej: Carrera 8 con Calle 10" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
+                               <div className="md:col-span-2 grid grid-cols-3 gap-4">
+                                    <FormField control={form.control} name="addressPrefix" render={({ field }) => (
+                                        <FormItem className="col-span-1">
+                                            <FormLabel>Prefijo</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    {addressPrefixes.map(option => (
+                                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                    <FormField control={form.control} name="address" render={({ field }) => (
+                                        <FormItem className="col-span-2">
+                                            <FormLabel>Dirección</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Ej: 8 con Calle 10" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                               </div>
                                 
                                 <FormField control={form.control} name="date" render={({ field }) => (
                                     <FormItem className="flex flex-col">
@@ -478,7 +527,7 @@ export default function AccidentsPage() {
                             ) : filteredAccidents.length > 0 ? (
                                 filteredAccidents.map((accident) => (
                                     <TableRow key={accident.id}>
-                                        <TableCell className="font-medium">{accident.location}</TableCell>
+                                        <TableCell className="font-medium">{accident.addressPrefix} {accident.address}</TableCell>
                                         <TableCell>{accident.dateTime ? format(accident.dateTime.toDate(), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
                                         <TableCell>{typeLabels[accident.accidentType] || 'N/A'}</TableCell>
                                         <TableCell>{causeLabels[accident.cause] || 'N/A'}</TableCell>

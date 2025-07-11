@@ -5,7 +5,8 @@ import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp
 
 // Este tipo representa cómo se reciben los datos del formulario.
 export type AccidentFormData = {
-  location: string;
+  addressPrefix: string;
+  address: string;
   date: Date;
   time: string;
   accidentType: string;
@@ -17,7 +18,9 @@ export type AccidentFormData = {
 // Este tipo representa la estructura del documento en Firestore.
 export type Accident = {
   id?: string;
-  location: string;
+  addressPrefix: string;
+  address: string;
+  location: string; // Combined field for backwards compatibility and easy search
   dateTime: Timestamp;
   accidentType: string;
   cause: string;
@@ -40,11 +43,13 @@ export async function getAccidents(): Promise<Accident[]> {
 
 // Añadir un nuevo accidente
 export async function addAccident(data: {
-  location: string,
-  dateTime: Date,
-  accidentType: string,
-  cause: string,
-  crossingStatus: string,
+  addressPrefix: string;
+  address: string;
+  location: string;
+  dateTime: Date;
+  accidentType: string;
+  cause: string;
+  crossingStatus: string;
   observations?: string
 }) {
   try {
@@ -62,11 +67,13 @@ export async function addAccident(data: {
 
 // Actualizar un accidente existente
 export async function updateAccident(id: string, data: {
-  location: string,
-  dateTime: Date,
-  accidentType: string,
-  cause: string,
-  crossingStatus: string,
+  addressPrefix: string;
+  address: string;
+  location: string;
+  dateTime: Date;
+  accidentType: string;
+  cause: string;
+  crossingStatus: string;
   observations?: string
 }) {
   const accidentDoc = doc(db, 'accidents', id);
