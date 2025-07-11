@@ -3,24 +3,10 @@
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
 
-// Este tipo representa cómo se reciben los datos del formulario.
-export type AccidentFormData = {
-  addressPrefix: string;
-  address: string;
-  date: Date;
-  time: string;
-  accidentType: string;
-  cause: string;
-  crossingStatus: string;
-  observations?: string;
-  latitude: number;
-  longitude: number;
-};
-
 // Este tipo representa la estructura del documento en Firestore.
 // Los Timestamps se convierten a Date para ser pasados a componentes de cliente.
 export type Accident = {
-  id?: string;
+  id: string;
   addressPrefix: string;
   address: string;
   location: string; 
