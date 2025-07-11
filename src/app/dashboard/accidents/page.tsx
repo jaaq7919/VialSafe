@@ -52,14 +52,17 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, Loader2, MoreHorizontal, Trash2, FilePenLine } from "lucide-react";
+import { Calendar as CalendarIcon, Loader2, MoreHorizontal, Trash2, FilePenLine, MapPin } from "lucide-react";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
 import React, { useMemo, useEffect, useState, useCallback } from "react";
 import type { DateRange } from "react-day-picker";
 import { Textarea } from "@/components/ui/textarea";
-import { getAccidents, addAccident, updateAccident, deleteAccident, type Accident } from '@/services/accidents'
+import { getAccidents, addAccident, updateAccident, deleteAccident, type Accident } from '@/services/accidents';
+import LocationPicker from '@/components/client/location-picker';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
 
 const addressPrefixes = [
     { value: 'CLL', label: 'CLL - Calle' },
@@ -146,6 +149,7 @@ export default function AccidentsPage() {
     
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [accidentIdToDelete, setAccidentIdToDelete] = useState<string | null>(null);
+    const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -155,6 +159,13 @@ export default function AccidentsPage() {
             observations: "",
         },
     });
+    
+    useEffect(() => {
+        const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+        if (apiKey) {
+            setGoogleMapsApiKey(apiKey);
+        }
+    }, []);
 
     const fetchAccidents = useCallback(async () => {
         setIsLoading(true);
@@ -197,7 +208,6 @@ export default function AccidentsPage() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true);
         try {
-            // Combine date and time into a single Date object for Firestore
             const [hours, minutes] = values.time.split(':').map(Number);
             const dateTime = new Date(values.date);
             dateTime.setHours(hours, minutes);
@@ -223,7 +233,7 @@ export default function AccidentsPage() {
                 });
             }
             form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, accidentType: undefined, cause: undefined, crossingStatus: undefined, observations: "" });
-            fetchAccidents(); // Refetch data
+            fetchAccidents();
 
         } catch (error) {
             console.error("Error en el registro:", error);
@@ -262,7 +272,7 @@ export default function AccidentsPage() {
                 title: "Reporte Eliminado",
                 description: "El reporte de accidente ha sido eliminado.",
             });
-            fetchAccidents(); // Refetch data
+            fetchAccidents();
         } catch (error) {
              console.error("Error deleting accident:", error);
              toast({
@@ -296,6 +306,12 @@ export default function AccidentsPage() {
         setIsDeleteDialogOpen(false);
         setAccidentIdToDelete(null);
     };
+    
+    const handleLocationSelect = useCallback((address: { prefix: string, street: string }) => {
+        const matchingPrefix = addressPrefixes.find(p => p.value.toUpperCase() === address.prefix.toUpperCase());
+        form.setValue('addressPrefix', matchingPrefix ? matchingPrefix.value : 'CLL', { shouldValidate: true });
+        form.setValue('address', address.street, { shouldValidate: true });
+    }, [form]);
 
     return (
         <>
@@ -307,20 +323,76 @@ export default function AccidentsPage() {
             <Card className="mt-6">
                 <CardHeader>
                     <CardTitle>{editingAccidentId ? 'Editando Reporte de Accidente' : 'Nuevo Reporte de Accidente'}</CardTitle>
-                    <CardDescription>Complete los detalles a continuación para registrar o actualizar un accidente.</CardDescription>
+                    <CardDescription>Complete los detalles del formulario o haga clic en el mapa para autocompletar la ubicación.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                               <div className="md:col-span-2 grid grid-cols-3 gap-4">
-                                    <FormField control={form.control} name="addressPrefix" render={({ field }) => (
-                                        <FormItem className="col-span-1">
-                                            <FormLabel>Prefijo</FormLabel>
+                <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="space-y-6">
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="md:col-span-2 grid grid-cols-3 gap-4">
+                                        <FormField control={form.control} name="addressPrefix" render={({ field }) => (
+                                            <FormItem className="col-span-1">
+                                                <FormLabel>Prefijo</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                    <FormControl><SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger></FormControl>
+                                                    <SelectContent>
+                                                        {addressPrefixes.map(option => (
+                                                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}/>
+                                        <FormField control={form.control} name="address" render={({ field }) => (
+                                            <FormItem className="col-span-2">
+                                                <FormLabel>Dirección</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Ej: 8 con Calle 10" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}/>
+                                </div>
+                                    
+                                    <FormField control={form.control} name="date" render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                            <FormLabel>Fecha</FormLabel>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                    <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                        {field.value ? format(field.value, "PPP", { locale: es }) : <span>Elige una fecha</span>}
+                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0" align="start">
+                                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus locale={es}/>
+                                                </PopoverContent>
+                                            </Popover>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}/>
+
+                                    <FormField control={form.control} name="time" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Hora</FormLabel>
+                                            <FormControl>
+                                                <Input type="time" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}/>
+                                    
+                                    <FormField control={form.control} name="accidentType" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Tipo de Accidente</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger></FormControl>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un tipo" /></SelectTrigger></FormControl>
                                                 <SelectContent>
-                                                    {addressPrefixes.map(option => (
+                                                    {typeOptions.map(option => (
                                                         <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -328,120 +400,80 @@ export default function AccidentsPage() {
                                             <FormMessage />
                                         </FormItem>
                                     )}/>
-                                    <FormField control={form.control} name="address" render={({ field }) => (
-                                        <FormItem className="col-span-2">
-                                            <FormLabel>Dirección</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Ej: 8 con Calle 10" {...field} />
-                                            </FormControl>
+
+                                    <FormField control={form.control} name="cause" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Causa Probable</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccione una causa" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    {causeOptions.map(option => (
+                                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}/>
-                               </div>
-                                
-                                <FormField control={form.control} name="date" render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Fecha</FormLabel>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <FormControl>
-                                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                    {field.value ? format(field.value, "PPP", { locale: es }) : <span>Elige una fecha</span>}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                                </FormControl>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus locale={es}/>
-                                            </PopoverContent>
-                                        </Popover>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
 
-                                <FormField control={form.control} name="time" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Hora</FormLabel>
-                                        <FormControl>
-                                            <Input type="time" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                                
-                                <FormField control={form.control} name="accidentType" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Tipo de Accidente</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un tipo" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                {typeOptions.map(option => (
-                                                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-
-                                <FormField control={form.control} name="cause" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Causa Probable</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccione una causa" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                {causeOptions.map(option => (
-                                                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-
-                                <FormField control={form.control} name="crossingStatus" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Estado del Cruce</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un estado" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="buena">Buena</SelectItem>
-                                                <SelectItem value="regular">Regular</SelectItem>
-                                                <SelectItem value="mala">Mala</SelectItem>
-                                                <SelectItem value="inexistente">Inexistente</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                                 <FormField
-                                    control={form.control}
-                                    name="observations"
-                                    render={({ field }) => (
+                                    <FormField control={form.control} name="crossingStatus" render={({ field }) => (
                                         <FormItem className="md:col-span-2">
-                                            <FormLabel>Observaciones</FormLabel>
-                                            <FormControl>
-                                                <Textarea
-                                                    placeholder="Añada cualquier detalle relevante del accidente..."
-                                                    {...field}
-                                                />
-                                            </FormControl>
+                                            <FormLabel>Estado del Cruce</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un estado" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="buena">Buena</SelectItem>
+                                                    <SelectItem value="regular">Regular</SelectItem>
+                                                    <SelectItem value="mala">Mala</SelectItem>
+                                                    <SelectItem value="inexistente">Inexistente</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
+                                    )}/>
+                                    <FormField
+                                        control={form.control}
+                                        name="observations"
+                                        render={({ field }) => (
+                                            <FormItem className="md:col-span-2">
+                                                <FormLabel>Observaciones</FormLabel>
+                                                <FormControl>
+                                                    <Textarea
+                                                        placeholder="Añada cualquier detalle relevante del accidente..."
+                                                        {...field}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button type="submit" disabled={isSubmitting}>
+                                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        {editingAccidentId ? 'Actualizar Reporte' : 'Enviar Reporte'}
+                                    </Button>
+                                    {editingAccidentId && (
+                                        <Button variant="outline" onClick={handleCancelEdit}>Cancelar</Button>
                                     )}
-                                />
-                            </div>
-                            <div className="flex gap-2">
-                                <Button type="submit" disabled={isSubmitting}>
-                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    {editingAccidentId ? 'Actualizar Reporte' : 'Enviar Reporte'}
-                                </Button>
-                                {editingAccidentId && (
-                                    <Button variant="outline" onClick={handleCancelEdit}>Cancelar</Button>
-                                )}
-                            </div>
-                        </form>
-                    </Form>
+                                </div>
+                            </form>
+                        </Form>
+                    </div>
+                     <div className="space-y-4">
+                        <label className="text-sm font-medium">Ubicar en el Mapa</label>
+                        {googleMapsApiKey ? (
+                            <LocationPicker onLocationSelect={handleLocationSelect} apiKey={googleMapsApiKey} />
+                        ) : (
+                           <Alert variant="destructive">
+                                <MapPin className="h-4 w-4" />
+                                <AlertTitle>Falta la clave de API de Google Maps</AlertTitle>
+                                <AlertDescription>
+                                    El mapa no se puede cargar. Por favor, agregue su `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` al archivo `.env` y reinicie el servidor.
+                                </AlertDescription>
+                           </Alert>
+                        )}
+                    </div>
                 </CardContent>
             </Card>
 
@@ -582,5 +614,3 @@ export default function AccidentsPage() {
         </>
     );
 }
-
-    
