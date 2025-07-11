@@ -59,7 +59,7 @@ import { useToast } from "@/hooks/use-toast";
 import React, { useMemo, useEffect, useState, useCallback } from "react";
 import type { DateRange } from "react-day-picker";
 import { Textarea } from "@/components/ui/textarea";
-import { getAccidents, addAccident, updateAccident, deleteAccident, type Accident } from '@/services/accidents';
+import { getAccidents, addAccident, updateAccident, type Accident } from '@/services/accidents';
 import dynamic from 'next/dynamic';
 
 const LocationPicker = dynamic(() => import('@/components/client/location-picker'), {
@@ -215,19 +215,15 @@ export default function AccidentsPage() {
                 return;
             }
             
-            const [hours, minutes] = values.time.split(':').map(Number);
-            const dateTime = new Date(values.date);
-            dateTime.setHours(hours, minutes);
-            
             if (editingAccidentId) {
-                await updateAccident(editingAccidentId, values, dateTime);
+                await updateAccident(editingAccidentId, values);
                 toast({
                     title: "Reporte Actualizado",
                     description: "El reporte de accidente se ha actualizado exitosamente.",
                 });
                 setEditingAccidentId(null);
             } else {
-                await addAccident(values, dateTime);
+                await addAccident(values);
                 toast({
                     title: "Reporte Registrado",
                     description: "El nuevo reporte de accidente se ha guardado.",

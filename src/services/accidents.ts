@@ -42,8 +42,12 @@ export async function getAccidents(): Promise<Accident[]> {
 }
 
 // Añadir un nuevo accidente
-export async function addAccident(data: z.infer<typeof formSchema>, dateTime: Date) {
+export async function addAccident(data: z.infer<typeof formSchema>) {
   try {
+    const [hours, minutes] = data.time.split(':').map(Number);
+    const dateTime = new Date(data.date);
+    dateTime.setHours(hours, minutes);
+
     const docRef = await addDoc(accidentsCollection, {
       ...data,
       location: `${data.addressPrefix} ${data.address}`,
@@ -59,9 +63,13 @@ export async function addAccident(data: z.infer<typeof formSchema>, dateTime: Da
 }
 
 // Actualizar un accidente existente
-export async function updateAccident(id: string, data: z.infer<typeof formSchema>, dateTime: Date) {
+export async function updateAccident(id: string, data: z.infer<typeof formSchema>) {
   const accidentDoc = doc(db, 'accidents', id);
   try {
+    const [hours, minutes] = data.time.split(':').map(Number);
+    const dateTime = new Date(data.date);
+    dateTime.setHours(hours, minutes);
+    
     await updateDoc(accidentDoc, {
         ...data,
         location: `${data.addressPrefix} ${data.address}`,
