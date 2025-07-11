@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -91,6 +92,20 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
         }
     }, [onLocationSelect]);
 
+    const displayMap = useMemo(
+        () => (
+            <MapContainer center={defaultCenter} zoom={15} style={{ height: '100%', width: '100%' }}>
+                <TileLayer
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                {marker && <Marker position={marker} />}
+                <MapEvents onMapClick={handleMapClick} />
+            </MapContainer>
+        ),
+        [handleMapClick, marker]
+    );
+
     // Due to SSR, MapContainer must only be rendered on the client.
     // We can use a simple state to ensure it's client-side only.
     const [isClient, setIsClient] = useState(false);
@@ -100,17 +115,7 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
 
     return (
         <div className="h-[400px] w-full rounded-md overflow-hidden bg-muted">
-            {isClient && (
-                <MapContainer center={defaultCenter} zoom={15} style={{ height: '100%', width: '100%' }}>
-                    <TileLayer
-                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    />
-                    {marker && <Marker position={marker} />}
-                    <MapEvents onMapClick={handleMapClick} />
-                </MapContainer>
-            )}
-             {!isClient && (
+            {isClient ? displayMap : (
                  <div className="flex h-full w-full items-center justify-center">Cargando mapa...</div>
             )}
         </div>
