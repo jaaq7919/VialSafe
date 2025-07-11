@@ -98,7 +98,7 @@ const addressPrefixes = [
     { value: 'ZN', label: 'ZN - Zona' },
 ];
 
-const formSchema = z.object({
+export const formSchema = z.object({
   addressPrefix: z.string({ required_error: "Seleccione un prefijo." }),
   address: z.string().min(3, "La dirección debe tener al menos 3 caracteres."),
   date: z.date({ required_error: "La fecha es obligatoria." }),
@@ -218,29 +218,16 @@ export default function AccidentsPage() {
             const [hours, minutes] = values.time.split(':').map(Number);
             const dateTime = new Date(values.date);
             dateTime.setHours(hours, minutes);
-
-            const accidentData = {
-                addressPrefix: values.addressPrefix,
-                address: values.address,
-                location: `${values.addressPrefix} ${values.address}`,
-                dateTime: dateTime,
-                type: values.type,
-                cause: values.cause,
-                crossingStatus: values.crossingStatus,
-                observations: values.observations,
-                latitude: values.latitude,
-                longitude: values.longitude,
-            };
             
             if (editingAccidentId) {
-                await updateAccident(editingAccidentId, accidentData);
+                await updateAccident(editingAccidentId, values, dateTime);
                 toast({
                     title: "Reporte Actualizado",
                     description: "El reporte de accidente se ha actualizado exitosamente.",
                 });
                 setEditingAccidentId(null);
             } else {
-                await addAccident(accidentData);
+                await addAccident(values, dateTime);
                 toast({
                     title: "Reporte Registrado",
                     description: "El nuevo reporte de accidente se ha guardado.",

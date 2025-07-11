@@ -2,6 +2,9 @@
 
 import { db } from '@/lib/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { z } from 'zod';
+import { formSchema } from '@/app/dashboard/accidents/page';
+
 
 // Este tipo representa la estructura del documento en Firestore.
 // Los Timestamps se convierten a Date para ser pasados a componentes de cliente.
@@ -39,12 +42,12 @@ export async function getAccidents(): Promise<Accident[]> {
 }
 
 // Añadir un nuevo accidente
-export async function addAccident(data: Omit<Accident, 'id' | 'createdAt' | 'createdBy'>) {
+export async function addAccident(data: z.infer<typeof formSchema>, dateTime: Date) {
   try {
     const docRef = await addDoc(accidentsCollection, {
       ...data,
       location: `${data.addressPrefix} ${data.address}`,
-      dateTime: Timestamp.fromDate(data.dateTime),
+      dateTime: Timestamp.fromDate(dateTime),
       createdAt: serverTimestamp(),
       createdBy: "admin_user" // Placeholder until auth is implemented
     });
@@ -56,13 +59,13 @@ export async function addAccident(data: Omit<Accident, 'id' | 'createdAt' | 'cre
 }
 
 // Actualizar un accidente existente
-export async function updateAccident(id: string, data: Omit<Accident, 'id' | 'createdAt' | 'createdBy'>) {
+export async function updateAccident(id: string, data: z.infer<typeof formSchema>, dateTime: Date) {
   const accidentDoc = doc(db, 'accidents', id);
   try {
     await updateDoc(accidentDoc, {
         ...data,
         location: `${data.addressPrefix} ${data.address}`,
-        dateTime: Timestamp.fromDate(data.dateTime)
+        dateTime: Timestamp.fromDate(dateTime)
     });
     return { success: true };
   } catch (error) {
