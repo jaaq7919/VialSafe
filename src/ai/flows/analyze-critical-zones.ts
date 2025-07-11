@@ -10,7 +10,7 @@ import {z} from 'zod';
 const AnalyzeCriticalZonesInputSchema = z.object({
   historicalAccidentData: z
     .string()
-    .describe('Datos históricos de accidentes, preferiblemente en formato CSV con columnas como: ubicacion, fecha, hora, tipo, causa.'),
+    .describe('Datos históricos de accidentes, preferiblemente en formato CSV con columnas como: ubicacion, fecha, hora, tipo, causa, latitud, longitud.'),
   criteria: z
     .string()
     .optional()
@@ -52,12 +52,12 @@ const prompt = ai.definePrompt({
   prompt: `Eres un experto analista de seguridad vial para la secretaría de tránsito de Florida, Valle del Cauca, Colombia. Tu tarea es identificar zonas críticas de alta accidentalidad.
 
 Sigue estos pasos para tu análisis:
-1.  **Analiza los Datos Históricos:** Revisa los datos de accidentes proporcionados. La columna 'ubicacion' es clave.
+1.  **Analiza los Datos Históricos:** Revisa los datos de accidentes proporcionados. Las columnas 'latitud' y 'longitud' son CLAVE para agrupar accidentes geográficamente. La columna 'ubicacion' da el nombre del lugar.
     - Datos Históricos: {{{historicalAccidentData}}}
 
-2.  **Agrupa por Intersección (RF04):** Agrupa los accidentes por la intersección vial o ubicación específica. Normaliza las ubicaciones si es necesario (ej. "Calle 10 con Cra 5" es igual a "Cra 5 con Calle 10").
+2.  **Agrupa por Proximidad Geográfica (RF04):** Utiliza las coordenadas de 'latitud' y 'longitud' para agrupar los accidentes que ocurrieron cerca unos de otros (por ejemplo, en un radio de 50 metros). Esto es más preciso que agrupar por el texto de 'ubicacion'.
 
-3.  **Calcula Frecuencia (RF05):** Para cada intersección agrupada, cuenta el número total de accidentes.
+3.  **Calcula Frecuencia (RF05):** Para cada grupo geográfico, cuenta el número total de accidentes. Usa la 'ubicacion' más común del grupo como el nombre de la zona.
 
 4.  **Detecta Zonas Críticas (RF06):** Aplica los siguientes criterios para determinar si una zona es crítica:
     - Criterios: {{{criteria}}}

@@ -8,7 +8,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
 const SuggestControlPostsInputSchema = z.object({
-  accidentData: z.string().describe('Datos históricos de accidentes en formato CSV, incluyendo ubicación, fecha, hora, tipo y causa.'),
+  accidentData: z.string().describe('Datos históricos de accidentes en formato CSV, incluyendo ubicación, fecha, hora, tipo, causa, latitud y longitud.'),
 });
 export type SuggestControlPostsInput = z.infer<typeof SuggestControlPostsInputSchema>;
 
@@ -40,9 +40,9 @@ const prompt = ai.definePrompt({
   {{{accidentData}}}
 
   **Instrucciones:**
-  1.  **Analiza los Patrones:** Revisa los datos para encontrar patrones clave. Busca concentraciones de accidentes por:
-      - **Ubicación:** ¿Dónde ocurren más accidentes?
-      - **Causa:** ¿Qué causas son más comunes en esas ubicaciones (exceso de velocidad, alcohol, etc.)?
+  1.  **Analiza los Patrones:** Revisa los datos para encontrar patrones clave. Usa las coordenadas 'latitud' y 'longitud' para identificar concentraciones geográficas de accidentes. Busca patrones por:
+      - **Ubicación Geográfica:** ¿Dónde se agrupan los accidentes según sus coordenadas? Usa la columna 'ubicacion' como referencia textual.
+      - **Causa:** ¿Qué causas son más comunes en esas concentraciones (exceso de velocidad, alcohol, etc.)?
       - **Horario:** ¿Hay picos de accidentalidad en ciertos días de la semana o rangos horarios (ej. noches de fin de semana, horas pico)?
 
   2.  **Sugiere Puestos de Control:** Para los patrones más claros, recomienda un puesto de control. Cada recomendación debe incluir:

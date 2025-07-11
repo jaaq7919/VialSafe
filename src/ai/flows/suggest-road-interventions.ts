@@ -8,8 +8,8 @@ import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
 const SuggestRoadInterventionsInputSchema = z.object({
-  accidentData: z.string().describe('Datos históricos de accidentes en formato CSV, incluyendo ubicación, fecha, hora y causa.'),
-  criticalZoneAnalysis: z.string().describe('Análisis JSON de zonas críticas con alta concentración de accidentes, para dar contexto.'),
+  accidentData: z.string().describe('Datos históricos de accidentes en formato CSV, incluyendo ubicación, fecha, hora, causa, latitud y longitud.'),
+  criticalZoneAnalysis: z.string().describe('Análisis JSON de zonas críticas con alta concentración de accidentes, para dar contexto. Estas zonas se calcularon usando coordenadas.'),
 });
 export type SuggestRoadInterventionsInput = z.infer<typeof SuggestRoadInterventionsInputSchema>;
 
@@ -43,9 +43,9 @@ const prompt = ai.definePrompt({
   {{{criticalZoneAnalysis}}}
 
   **Instrucciones:**
-  1.  Revisa cuidadosamente las zonas críticas identificadas y los datos crudos de accidentes para encontrar patrones.
+  1.  Revisa cuidadosamente las zonas críticas identificadas y los datos crudos de accidentes para encontrar patrones. Las zonas críticas se basaron en coordenadas, por lo que son geográficamente precisas.
   2.  Para las zonas más críticas, o para patrones generales que identifiques, sugiere una intervención vial concreta y apropiada. Ejemplos de intervenciones: "Instalación de Semáforo", "Implementar Reductores de Velocidad", "Mejorar Señal de PARE", "Añadir Iluminación Pública", "Pintar Cebra Peatonal".
-  3.  Justifica cada recomendación de forma clara y concisa, basándote en la evidencia de los datos (ej: "Alta frecuencia de colisiones nocturnas", "Exceso de velocidad recurrente", "Atropellos de peatones en esta esquina").
+  3.  Justifica cada recomendación de forma clara y concisa, basándote en la evidencia de los datos (ej: "Alta frecuencia de colisiones nocturnas", "Exceso de velocidad recurrente en este punto exacto (lat/lng)", "Atropellos de peatones en esta esquina").
   4.  Genera entre 2 y 4 recomendaciones clave.
   5.  Formatea tu respuesta final como un objeto JSON que se ajuste al esquema solicitado.`,
 });
