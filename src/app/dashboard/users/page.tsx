@@ -52,8 +52,11 @@ import { useToast } from "@/hooks/use-toast";
 
 const userSchema = z.object({
   id: z.string().optional(),
-  name: z.string().min(3, "El nombre debe tener al menos 3 caracteres."),
+  firstName: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
+  lastName: z.string().min(2, "El apellido debe tener al menos 2 caracteres."),
+  documentNumber: z.string().min(5, "El número de documento es muy corto."),
   email: z.string().email("Debe ser un correo electrónico válido."),
+  phone: z.string().min(7, "El número de celular no es válido."),
   role: z.enum(["Administrador", "Analista de Tráfico", "Operador de Tráfico"], { required_error: "Debe seleccionar un rol." }),
 });
 
@@ -66,7 +69,10 @@ type User = z.infer<typeof userSchema> & {
 const initialUsers: User[] = [
   {
     id: "1",
-    name: "Carlos Vargas",
+    firstName: "Carlos",
+    lastName: "Vargas",
+    documentNumber: "11111111",
+    phone: "3101234567",
     email: "carlos.vargas@centinelavial.com",
     role: "Administrador",
     avatar: "https://i.pravatar.cc/150?u=carlos",
@@ -74,7 +80,10 @@ const initialUsers: User[] = [
   },
   {
     id: "2",
-    name: "Sofía Reyes",
+    firstName: "Sofía",
+    lastName: "Reyes",
+    documentNumber: "22222222",
+    phone: "3111234567",
     email: "sofia.reyes@centinelavial.com",
     role: "Analista de Tráfico",
     avatar: "https://i.pravatar.cc/150?u=sofia",
@@ -82,7 +91,10 @@ const initialUsers: User[] = [
   },
   {
     id: "3",
-    name: "Mateo Diaz",
+    firstName: "Mateo",
+    lastName: "Diaz",
+    documentNumber: "33333333",
+    phone: "3121234567",
     email: "mateo.diaz@centinelavial.com",
     role: "Operador de Tráfico",
     avatar: "https://i.pravatar.cc/150?u=mateo",
@@ -90,7 +102,10 @@ const initialUsers: User[] = [
   },
   {
     id: "4",
-    name: "Valentina Castillo",
+    firstName: "Valentina",
+    lastName: "Castillo",
+    documentNumber: "44444444",
+    phone: "3131234567",
     email: "valentina.castillo@centinelavial.com",
     role: "Operador de Tráfico",
     avatar: "https://i.pravatar.cc/150?u=valentina",
@@ -115,14 +130,17 @@ export default function UsersPage() {
   const form = useForm<z.infer<typeof userSchema>>({
     resolver: zodResolver(userSchema),
     defaultValues: {
-      name: "",
+      firstName: "",
+      lastName: "",
+      documentNumber: "",
       email: "",
+      phone: "",
     },
   });
 
   const handleAddNew = () => {
     setEditingUser(null);
-    form.reset({ name: "", email: "", role: undefined });
+    form.reset({ firstName: "", lastName: "", documentNumber: "", email: "", phone: "", role: undefined });
     setIsDialogOpen(true);
   };
 
@@ -142,7 +160,7 @@ export default function UsersPage() {
       setUsers(users.filter((user) => user.id !== userToDelete.id));
       toast({
         title: "Usuario Eliminado",
-        description: `El usuario ${userToDelete.name} ha sido eliminado.`,
+        description: `El usuario ${userToDelete.firstName} ${userToDelete.lastName} ha sido eliminado.`,
       });
     }
     setIsDeleteDialogOpen(false);
@@ -150,15 +168,16 @@ export default function UsersPage() {
   };
   
   function onSubmit(values: z.infer<typeof userSchema>) {
-    const initials = values.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+    const initials = (values.firstName[0] + (values.lastName[0] || '')).toUpperCase();
     const avatar = `https://i.pravatar.cc/150?u=${values.email}`;
+    const name = `${values.firstName} ${values.lastName}`;
     
     if (editingUser) {
       // Update user
       setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...values, avatar, initials } : u));
       toast({
         title: "Usuario Actualizado",
-        description: `Los datos de ${values.name} han sido actualizados.`,
+        description: `Los datos de ${name} han sido actualizados.`,
       });
     } else {
       // Add new user
@@ -171,7 +190,7 @@ export default function UsersPage() {
       setUsers([newUser, ...users]);
        toast({
         title: "Usuario Creado",
-        description: `El usuario ${values.name} ha sido creado exitosamente.`,
+        description: `El usuario ${name} ha sido creado exitosamente.`,
       });
     }
     setIsDialogOpen(false);
@@ -213,11 +232,11 @@ export default function UsersPage() {
                   <TableCell>
                     <div className="flex items-center gap-3">
                       <Avatar>
-                        <AvatarImage src={user.avatar} alt={user.name} />
+                        <AvatarImage src={user.avatar} alt={`${user.firstName} ${user.lastName}`} />
                         <AvatarFallback>{user.initials}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium">{user.name}</p>
+                        <p className="font-medium">{user.firstName} {user.lastName}</p>
                         <p className="text-sm text-muted-foreground">{user.email}</p>
                       </div>
                     </div>
@@ -261,19 +280,47 @@ export default function UsersPage() {
               </DialogHeader>
               <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                       <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                              <FormItem>
-                                  <FormLabel>Nombre Completo</FormLabel>
-                                  <FormControl>
-                                      <Input placeholder="Ej: Juan Pérez" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                              </FormItem>
-                          )}
-                      />
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                                control={form.control}
+                                name="firstName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nombre</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Ej: Juan" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="lastName"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Apellido</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Ej: Pérez" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                         <FormField
+                            control={form.control}
+                            name="documentNumber"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Número de Documento</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Ej: 123456789" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
                        <FormField
                           control={form.control}
                           name="email"
@@ -282,6 +329,19 @@ export default function UsersPage() {
                                   <FormLabel>Correo Electrónico</FormLabel>
                                   <FormControl>
                                       <Input placeholder="Ej: juan.perez@centinelavial.com" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                       <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Celular</FormLabel>
+                                  <FormControl>
+                                      <Input placeholder="Ej: 3101234567" {...field} />
                                   </FormControl>
                                   <FormMessage />
                               </FormItem>
@@ -326,7 +386,7 @@ export default function UsersPage() {
                   <AlertDialogTitle>¿Está seguro de que desea eliminar este usuario?</AlertDialogTitle>
                   <AlertDialogDescription>
                       Esta acción no se puede deshacer. Esto eliminará permanentemente la cuenta de 
-                      <strong> {userToDelete?.name}</strong> y sus datos asociados.
+                      <strong> {userToDelete?.firstName} {userToDelete?.lastName}</strong> y sus datos asociados.
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
