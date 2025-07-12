@@ -18,6 +18,12 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Configuración para Google AI
+  experimental: {
+    serverComponentsExternalPackages: [
+      '@google/generative-ai',
+    ],
+  },
 };
 
 export default nextConfig;

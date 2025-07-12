@@ -4,14 +4,17 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Lightbulb, TrafficCone, OctagonAlert, Signal } from "lucide-react";
+import { Loader2, Lightbulb, TrafficCone, OctagonAlert, Signal, Wifi } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { SuggestRoadInterventionsOutput } from '@/ai/flows/suggest-road-interventions';
 import { getAccidents } from '@/services/accidents';
-import { format, min, max } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
-import { dbscan } from '@/lib/dbscan';
-import type { Accident } from '@/services/accidents';
+import { suggestRoadInterventions } from '@/ai/flows/suggest-road-interventions';
+
+type Recommendation = {
+    location: string;
+    intervention: string;
+    justification: string;
+};
 
 const interventionIcons: { [key: string]: React.ElementType } = {
     'semáforo': Signal,
@@ -23,6 +26,7 @@ const interventionIcons: { [key: string]: React.ElementType } = {
     'paso peatonal': OctagonAlert,
     'mejorar iluminación': Lightbulb,
     'iluminación': Lightbulb,
+    'respuesta de la ia': Wifi,
     'default': Lightbulb
 };
 
@@ -40,7 +44,7 @@ const getIconForIntervention = (intervention: string): React.ElementType => {
 export default function InterventionsPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = React.useState(false);
-    const [recommendations, setRecommendations] = React.useState<SuggestRoadInterventionsOutput['recommendations'] | null>(null);
+    const [recommendations, setRecommendations] = React.useState<Recommendation[] | null>(null);
     const [error, setError] = React.useState<string | null>(null);
 
 
@@ -50,91 +54,13 @@ export default function InterventionsPage() {
         setError(null);
         
         try {
-            const allAccidents = await getAccidents();
-            
-            if (allAccidents.length < 2) {
-                setError("No hay suficientes accidentes registrados (<2) para analizar. Agregue algunos datos primero.");
-                setIsLoading(false);
-                return;
-            }
-
-            const points = allAccidents.map(acc => [acc.latitude, acc.longitude] as [number, number]);
-            const clusterAssignments = dbscan(points, 0.0005, 2);
-
-            const clusters: Accident[][] = [];
-            clusterAssignments.forEach((clusterIndex, pointIndex) => {
-                if (clusterIndex !== -1) { 
-                    if (!clusters[clusterIndex]) {
-                        clusters[clusterIndex] = [];
-                    }
-                    clusters[clusterIndex].push(allAccidents[pointIndex]);
-                }
-            });
-
-             if (!clusters || clusters.filter(c => c && c.length > 0).length === 0) {
-                setError('El algoritmo DBSCAN no encontró agrupaciones geográficas significativas con los datos seleccionados.');
-                setIsLoading(false);
-                return;
-            }
-
-            const accidentClusters = clusters.filter(c => c && c.length > 0).map((cluster, index) => {
-                const accidentCount = cluster.length;
-                const locations = cluster.map(acc => `${acc.addressPrefix} ${acc.address}`);
-                const locationCounts = locations.reduce((acc, loc) => { acc[loc] = (acc[loc] || 0) + 1; return acc; }, {} as {[key: string]: number});
-                const representativeLocation = Object.keys(locationCounts).reduce((a, b) => locationCounts[a] > locationCounts[b] ? a : b);
-                const causes = cluster.map(acc => acc.cause);
-                const causeCounts = causes.reduce((acc, cause) => { acc[cause] = (acc[cause] || 0) + 1; return acc; }, {} as {[key: string]: number});
-                const causeSummary = Object.entries(causeCounts).map(([cause, count]) => `${count} por ${cause}`).join(', ');
-                const dates = cluster.map(acc => new Date(acc.dateTime));
-                const period = `${format(min(dates), 'yyyy-MM-dd')} a ${format(max(dates), 'yyyy-MM-dd')}`;
-
-                return { clusterId: index, accidentCount, representativeLocation, causeSummary, period };
-            });
-            
-            // Lazy load AI actions
-            const { analyzeCriticalZones } = await import('@/ai/flows/analyze-critical-zones');
-            const { suggestRoadInterventions } = await import('@/ai/flows/suggest-road-interventions');
-
-            const allDates = allAccidents.map(acc => new Date(acc.dateTime));
-            const analysisPeriod = `del ${format(min(allDates), 'yyyy-MM-dd')} al ${format(max(allDates), 'yyyy-MM-dd')}`;
-
-            const analysisResult = await analyzeCriticalZones({
-                accidentClusters,
-                analysisPeriod: analysisPeriod,
-            });
-
-            if (!analysisResult || analysisResult.criticalZones.length === 0) {
-                setError("No se pudieron identificar zonas críticas para analizar. No es posible generar recomendaciones.");
-                setIsLoading(false);
-                return;
-            }
-
-            const headers = "ubicacion,fecha,hora,tipo,causa,estado_cruce,observaciones,latitud,longitud";
-             const csvData = allAccidents.map(acc => {
-                const accDate = new Date(acc.dateTime);
-                return [
-                    `"${acc.addressPrefix} ${acc.address}"`,
-                    `"${format(accDate, 'yyyy-MM-dd')}"`,
-                    `"${format(accDate, 'HH:mm')}"`,
-                    `"${acc.type}"`,
-                    `"${acc.cause}"`,
-                    `"${acc.crossingStatus}"`,
-                    `"${acc.observations || ''}"`,
-                    `"${acc.latitude}"`,
-                    `"${acc.longitude}"`
-                ].join(',');
-            }).join('\\n');
-            const historicalAccidentData = `${headers}\\n${csvData}`;
-
-            const interventionsResult = await suggestRoadInterventions({
-                accidentData: historicalAccidentData,
-                criticalZoneAnalysis: JSON.stringify(analysisResult),
-            });
+            // Llamamos a la función de prueba. No necesitamos datos de accidentes para esto.
+            const interventionsResult = await suggestRoadInterventions({});
             
             if (interventionsResult && interventionsResult.recommendations.length > 0) {
                 setRecommendations(interventionsResult.recommendations);
             } else {
-                setError("La IA no generó ninguna recomendación para las zonas analizadas en esta ocasión.");
+                setError("La IA no generó una respuesta válida para la prueba de conexión.");
             }
 
         } catch (e) {
@@ -154,14 +80,14 @@ export default function InterventionsPage() {
         <>
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Sugerencias de Intervención Vial</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Prueba de Conexión con IA</h1>
                     <p className="text-muted-foreground mt-1">
-                        Utilice la IA para obtener recomendaciones de intervenciones basadas en datos históricos.
+                        Verifique la conexión con el modelo de IA de Google.
                     </p>
                 </div>
                  <Button onClick={handleGenerate} disabled={isLoading}>
-                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
-                    Generar Sugerencias con IA
+                    {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wifi className="mr-2 h-4 w-4" />}
+                    Realizar Prueba
                 </Button>
             </div>
             
@@ -169,9 +95,9 @@ export default function InterventionsPage() {
                 {isLoading && (
                     <div className="flex flex-col items-center justify-center text-center text-muted-foreground bg-card p-8 rounded-lg border">
                         <Loader2 className="w-12 h-12 mb-4 animate-spin text-primary" />
-                        <h3 className="text-lg font-semibold text-foreground">Generando recomendaciones...</h3>
+                        <h3 className="text-lg font-semibold text-foreground">Contactando a la IA...</h3>
                         <p className="mt-2 max-w-md">
-                           La IA está analizando patrones de accidentalidad y las características de las vías para proponer las soluciones más efectivas. Esto puede tardar unos segundos.
+                           Enviando un saludo al modelo de IA. Esto puede tardar unos segundos.
                         </p>
                     </div>
                 )}
@@ -179,7 +105,7 @@ export default function InterventionsPage() {
                 {error && (
                      <Alert variant="destructive">
                         <OctagonAlert className="h-4 w-4" />
-                        <AlertTitle>No se pudieron generar sugerencias</AlertTitle>
+                        <AlertTitle>No se pudo completar la prueba</AlertTitle>
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 )}
@@ -200,7 +126,7 @@ export default function InterventionsPage() {
                                     </div>
                                 </CardHeader>
                                 <CardContent>
-                                    <p className="text-sm text-muted-foreground">{rec.justification}</p>
+                                    <p className="text-sm font-semibold">{rec.justification}</p>
                                 </CardContent>
                             </Card>
                         )})}
@@ -210,7 +136,7 @@ export default function InterventionsPage() {
                 {!isLoading && !recommendations && !error && (
                     <Card>
                         <CardContent className="p-8 text-center text-muted-foreground">
-                            <p>Presione el botón "Generar Sugerencias con IA" para obtener recomendaciones inteligentes basadas en el historial completo de accidentes.</p>
+                            <p>Presione el botón "Realizar Prueba" para enviar un saludo a la IA y verificar la conexión.</p>
                         </CardContent>
                     </Card>
                 )}
