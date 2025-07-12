@@ -163,12 +163,11 @@ export default function UsersPage() {
         });
       } else {
         const tempPassword = Math.random().toString(36).slice(-8);
-        const userData = { ...values, password: tempPassword };
-        await addUser(userData);
+        await addUser(values);
         toast({
-          title: "Usuario Creado",
-          description: `El usuario ${values.firstName} ha sido creado. Contraseña temporal: ${tempPassword}`,
-          duration: 10000,
+          title: "Perfil de Usuario Creado",
+          description: `El perfil para ${values.firstName} ha sido creado. Contraseña temporal sugerida: ${tempPassword}. Recuerde crear la cuenta en Firebase Auth.`,
+          duration: 15000,
         });
       }
       fetchUsers();
@@ -385,8 +384,8 @@ export default function UsersPage() {
               <AlertDialogHeader>
                   <AlertDialogTitle>¿Está seguro de que desea eliminar este usuario?</AlertDialogTitle>
                   <AlertDialogDescription>
-                      Esta acción no se puede deshacer. Esto eliminará permanentemente la cuenta de 
-                      <strong> {userToDelete?.firstName} {userToDelete?.lastName}</strong> de Firebase Authentication y su perfil de Firestore.
+                      Esta acción no se puede deshacer. Esto eliminará permanentemente el perfil de 
+                      <strong> {userToDelete?.firstName} {userToDelete?.lastName}</strong> de Firestore. Recuerde eliminar la cuenta de Firebase Authentication manualmente.
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

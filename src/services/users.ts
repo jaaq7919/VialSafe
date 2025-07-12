@@ -10,7 +10,8 @@ import {
     updateDoc, 
     deleteDoc,
     serverTimestamp,
-    getDoc
+    getDoc,
+    addDoc
 } from 'firebase/firestore';
 import { 
     createUserWithEmailAndPassword, 
@@ -26,11 +27,14 @@ const addUserSchema = z.object({
   email: z.string().email(),
   phone: z.string().min(7),
   role: z.enum(["Administrador", "Analista de Tráfico", "Operador de Tráfico"]),
-  password: z.string().min(6), // Password is required for creation
+  password: z.string().optional(), // Password is now optional in the schema
 });
 
 // Zod schema for updating a user (password is optional)
-const updateUserSchema = addUserSchema.omit({ password: true });
+const updateUserSchema = addUserSchema.omit({ password: true }).extend({
+    id: z.string().optional(),
+});
+
 
 export type UserProfile = {
   uid: string;
@@ -60,62 +64,46 @@ export async function getUsers(): Promise<UserProfile[]> {
   });
 }
 
-// Add a new user to Firebase Auth and Firestore
+// Add a new user profile to Firestore
 export async function addUser(data: z.infer<typeof addUserSchema>) {
-    // Note: Creating users requires admin privileges or specific security rules.
-    // This function will fail if not run by an authenticated admin user.
-    // For simplicity, we assume the currently logged-in user has permissions.
-    // A more robust solution uses Firebase Cloud Functions to create users.
-    
-    // We create a temporary, secondary Firebase app instance to create the user
-    // This avoids forcing the current admin to sign out.
-    
-    // As Firebase Admin SDK is not available on client/edge, we can't directly create user.
-    // The current Firebase Auth SDK doesn't support creating users other than the current one.
-    // A Firebase Cloud Function is the standard way to handle this.
+    // SECURITY NOTE: We are only creating the user profile in Firestore, not in Firebase Auth.
+    // To enable login, the administrator must manually create the user in the Firebase Console (Authentication)
+    // with the same email and a password. This is a workaround because creating auth users
+    // from the client-side is restricted for security reasons. The standard solution is a Cloud Function.
 
-    // **SIMULATION for this environment:**
-    // We'll throw an error and explain the limitation. For a real app, this would be a call to a Cloud Function.
-    
-    throw new Error("La creación de usuarios directamente desde el cliente no está soportada por seguridad. Se debe implementar una Cloud Function para esta tarea.");
-    
-    /*
-    // --- Example code for a Cloud Function context ---
-    
-    // 1. Create user in Firebase Auth
-    const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-    const { user } = userCredential;
+    try {
+        const initials = (data.firstName[0] + (data.lastName[0] || '')).toUpperCase();
+        // Using a placeholder avatar service
+        const avatarUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${data.firstName} ${data.lastName}`;
 
-    // 2. Prepare profile data for Firestore
-    const initials = (data.firstName[0] + (data.lastName[0] || '')).toUpperCase();
-    const avatarUrl = `https://i.pravatar.cc/150?u=${data.email}`;
+        const userProfile = {
+            firstName: data.firstName,
+            lastName: data.lastName,
+            documentNumber: data.documentNumber,
+            email: data.email,
+            phone: data.phone,
+            role: data.role,
+            avatarUrl,
+            initials,
+            createdAt: serverTimestamp(),
+        };
 
-    const userProfile = {
-      firstName: data.firstName,
-      lastName: data.lastName,
-      documentNumber: data.documentNumber,
-      email: data.email,
-      phone: data.phone,
-      role: data.role,
-      avatarUrl,
-      initials,
-      createdAt: serverTimestamp(),
-    };
+        // We use addDoc to let Firestore generate the UID, which we will use as our reference.
+        const docRef = await addDoc(collection(db, "users"), userProfile);
 
-    // 3. Save profile to Firestore with the user's UID as document ID
-    await setDoc(doc(db, "users", user.uid), userProfile);
-
-    return { success: true, uid: user.uid };
-    */
+        return { success: true, uid: docRef.id };
+    } catch (error) {
+        console.error("Error adding user profile to Firestore: ", error);
+        throw new Error("Failed to create user profile in the database.");
+    }
 }
+
 
 // Update a user's profile in Firestore
 export async function updateUser(uid: string, data: z.infer<typeof updateUserSchema>) {
   const userDoc = doc(db, 'users', uid);
   try {
-    const updateData = {
-        ...data
-    };
+    const updateData: Partial<z.infer<typeof updateUserSchema>> = { ...data };
     delete updateData.id; // Remove id from data object before updating
     await updateDoc(userDoc, updateData);
     return { success: true };
@@ -127,16 +115,12 @@ export async function updateUser(uid: string, data: z.infer<typeof updateUserSch
 
 // Delete a user's profile from Firestore
 export async function deleteUser(uid: string) {
-    // Similar to addUser, deleting a user from Auth should be done via a Cloud Function for security.
-    // We will only delete the Firestore document here.
+    // Deleting the auth user should be done via a Cloud Function for security.
+    // This implementation only deletes the Firestore document.
   const userDoc = doc(db, 'users', uid);
   try {
     await deleteDoc(userDoc);
-    // You would then call a cloud function to delete the user from Auth:
-    // const deleteUserFunction = httpsCallable(functions, 'deleteUser');
-    // await deleteUserFunction({ uid });
-    
-    console.warn(`User profile ${uid} deleted from Firestore. Remember to delete from Firebase Auth via a Cloud Function.`);
+    console.warn(`User profile ${uid} deleted from Firestore. Remember to delete from Firebase Auth via a Cloud Function or manually in the console.`);
     return { success: true };
   } catch (error) {
     console.error("Error deleting user profile: ", error);
