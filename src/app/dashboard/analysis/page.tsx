@@ -2,7 +2,6 @@
 "use client";
 
 import React from "react";
-import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,11 +19,6 @@ import type { DateRange } from "react-day-picker";
 import { analyzeCriticalZones, type AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones";
 import { useToast } from "@/hooks/use-toast";
 
-const Heatmap = dynamic(() => import('@/components/client/heatmap'), {
-    ssr: false,
-    loading: () => <div className="h-full w-full bg-muted flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
-});
-
 export default function AnalysisPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = React.useState(false);
@@ -35,8 +29,6 @@ export default function AnalysisPage() {
     const [typeFilter, setTypeFilter] = React.useState("");
     const [causeFilter, setCauseFilter] = React.useState("");
 
-    const [mapData, setMapData] = React.useState<[number, number, number][] | null>(null);
-    
     const [typeOptions, setTypeOptions] = React.useState<SettingItem[]>([]);
     const [causeOptions, setCauseOptions] = React.useState<SettingItem[]>([]);
 
@@ -70,7 +62,6 @@ export default function AnalysisPage() {
         setIsLoading(true);
         setError(null);
         setAnalysisResult(null);
-        setMapData(null);
 
         try {
             const allAccidents = await getAccidents();
@@ -130,10 +121,6 @@ export default function AnalysisPage() {
                  setError("La IA no identificó zonas críticas con los filtros seleccionados. Los datos no superan los umbrales de criticidad.");
             } else {
                  setAnalysisResult(result);
-                 const heatMapPoints = filteredAccidents
-                    .filter(acc => acc.latitude && acc.longitude)
-                    .map(acc => [acc.latitude, acc.longitude, 0.5] as [number, number, number]);
-                 setMapData(heatMapPoints);
             }
 
         } catch (e) {
@@ -233,7 +220,7 @@ export default function AnalysisPage() {
                 </CardFooter>
             </Card>
 
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+             <div className="mt-8">
                 <Card>
                     <CardHeader>
                         <CardTitle>Resultados del Análisis IA</CardTitle>
@@ -290,19 +277,6 @@ export default function AnalysisPage() {
                                 <p>Ajuste los filtros y presione "Analizar Datos" para iniciar el análisis con IA.</p>
                             </div>
                         )}
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Mapa de Calor de Zonas Críticas</CardTitle>
-                        <CardDescription>
-                            Visualización geográfica de la concentración de accidentes.
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="aspect-video w-full h-full min-h-[400px] rounded-md overflow-hidden">
-                           <Heatmap data={mapData} />
-                        </div>
                     </CardContent>
                 </Card>
              </div>
