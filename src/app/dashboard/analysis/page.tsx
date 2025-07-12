@@ -21,8 +21,8 @@ export default function AnalysisPage() {
     const [causeOptions, setCauseOptions] = useState<SettingItem[]>([]);
     const [typeOptions, setTypeOptions] = useState<SettingItem[]>([]);
 
-    const [causeFilter, setCauseFilter] = useState("");
-    const [typeFilter, setTypeFilter] = useState("");
+    const [causeFilter, setCauseFilter] = useState("all");
+    const [typeFilter, setTypeFilter] = useState("all");
     const [startDate, setStartDate] = useState<Date | undefined>();
     const [endDate, setEndDate] = useState<Date | undefined>();
 
@@ -52,8 +52,8 @@ export default function AnalysisPage() {
     }, [toast]);
 
     const handleClearFilters = () => {
-        setCauseFilter("");
-        setTypeFilter("");
+        setCauseFilter("all");
+        setTypeFilter("all");
         setStartDate(undefined);
         setEndDate(undefined);
     };
@@ -67,8 +67,8 @@ export default function AnalysisPage() {
             const filters = {
                 startDate: startDate?.toISOString(),
                 endDate: endDate?.toISOString(),
-                type: typeFilter,
-                cause: causeFilter,
+                type: typeFilter === 'all' ? undefined : typeFilter,
+                cause: causeFilter === 'all' ? undefined : causeFilter,
             };
             const result = await runDbscanAnalysis(filters);
             if (result.clusters && result.clusters.length > 0) {
@@ -166,7 +166,7 @@ export default function AnalysisPage() {
                                     <SelectValue placeholder="Todos los tipos" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Todos los tipos</SelectItem>
+                                    <SelectItem value="all">Todos los tipos</SelectItem>
                                     {typeOptions.map((option) => (
                                         <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                     ))}
@@ -181,7 +181,7 @@ export default function AnalysisPage() {
                                     <SelectValue placeholder="Todas las causas" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Todas las causas</SelectItem>
+                                    <SelectItem value="all">Todas las causas</SelectItem>
                                     {causeOptions.map((option) => (
                                         <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                     ))}
