@@ -1,11 +1,49 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardCharts } from "@/components/client/dashboard-charts";
 import { Eye, MapPin, Wrench, Siren } from "lucide-react";
+import { getAccidents, type Accident } from "@/services/accidents";
+import { getSettings } from "@/services/settings";
 
-export default function DashboardPage() {
+// Helper function to process data for charts
+const processChartData = (accidents: Accident[], causeLabels: { [key: string]: string }) => {
+    const accidentsByMonth: { [key: string]: number } = {};
+    const accidentsByCause: { [key: string]: number } = {};
+
+    accidents.forEach(accident => {
+        const date = new Date(accident.dateTime);
+        const month = date.toLocaleString('es-ES', { month: 'short' }).replace('.', '');
+        const capitalizedMonth = month.charAt(0).toUpperCase() + month.slice(1);
+
+        accidentsByMonth[capitalizedMonth] = (accidentsByMonth[capitalizedMonth] || 0) + 1;
+        
+        const causeLabel = causeLabels[accident.cause] || 'Otro';
+        accidentsByCause[causeLabel] = (accidentsByCause[causeLabel] || 0) + 1;
+    });
+
+    const accidentsByMonthData = Object.entries(accidentsByMonth)
+        .map(([month, accidents]) => ({ month, accidents }))
+        .sort((a, b) => {
+            const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+            return months.indexOf(a.month) - months.indexOf(b.month);
+        });
+
+    const accidentsByCauseData = Object.entries(accidentsByCause)
+        .map(([name, value]) => ({ name, value }));
+
+    return { accidentsByMonthData, accidentsByCauseData };
+};
+
+
+export default async function DashboardPage() {
+  const accidents = await getAccidents();
+  const settings = await getSettings();
+  const causeLabels = Object.fromEntries((settings?.accidentCauses || []).map(c => [c.value, c.label]));
+
+  const { accidentsByMonthData, accidentsByCauseData } = processChartData(accidents, causeLabels);
+
   const stats = [
-    { title: "Total Accidentes Registrados", value: "146", icon: Siren, change: "Datos simulados" },
-    { title: "Zonas Críticas", value: "4", icon: MapPin, change: "+1 esta semana" },
+    { title: "Total Accidentes Registrados", value: accidents.length.toString(), icon: Siren, change: "Datos en tiempo real" },
+    { title: "Zonas Críticas (Simulado)", value: "4", icon: MapPin, change: "+1 esta semana" },
     { title: "Intervenciones Pendientes", value: "15", icon: Wrench, change: "3 esperando aprobación" },
     { title: "Reportes Activos", value: "28", icon: Eye, change: "Actualizado hace 2 horas" },
   ];
@@ -31,7 +69,7 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
-      <DashboardCharts />
+      <DashboardCharts accidentsByMonthData={accidentsByMonthData} accidentsByCauseData={accidentsByCauseData} />
     </>
   );
 }
