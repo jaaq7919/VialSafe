@@ -1,7 +1,11 @@
 
-import { genkit } from '@genkit-ai/core';
+import { genkit, configureGenkit } from '@genkit-ai/core';
 import { googleAI } from '@genkit-ai/googleai';
 
-export const ai = genkit({
+configureGenkit({
   plugins: [googleAI()],
+  logLevel: 'debug',
+  enableTracingAndMetrics: true,
 });
+
+export { genkit as ai };
