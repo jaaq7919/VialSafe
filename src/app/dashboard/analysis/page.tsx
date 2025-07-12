@@ -166,6 +166,7 @@ export default function AnalysisPage() {
                                     <SelectValue placeholder="Todos los tipos" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="">Todos los tipos</SelectItem>
                                     {typeOptions.map((option) => (
                                         <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                     ))}
@@ -180,6 +181,7 @@ export default function AnalysisPage() {
                                     <SelectValue placeholder="Todas las causas" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="">Todas las causas</SelectItem>
                                     {causeOptions.map((option) => (
                                         <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                     ))}
