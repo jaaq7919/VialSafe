@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -10,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Loader2, AlertTriangle, Lightbulb, Calendar as CalendarIcon } from "lucide-react";
 import { type Accident, getAccidents } from "@/services/accidents";
+import { getSettings, type SettingItem } from "@/services/settings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -23,25 +25,6 @@ const Heatmap = dynamic(() => import('@/components/client/heatmap'), {
     loading: () => <div className="h-full w-full bg-muted flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
 });
 
-const causeLabels: { [key: string]: string } = {
-    'exceso-velocidad': 'Exceso de Velocidad',
-    'distraccion': 'Conducción Distraída',
-    'alcohol': 'Conducir Bajo Influencia (CBI)',
-    'clima': 'Condiciones Climáticas',
-    'imprudencia': 'Imprudencia del Conductor',
-    'falla-mecanica': 'Falla Mecánica',
-    'otro': 'Otro',
-};
-
-const typeLabels: { [key: string]: string } = {
-    'colision': 'Colisión',
-    'atropello': 'Atropello',
-    'caida-ocupante': 'Caída de Ocupante',
-    'volcamiento': 'Volcamiento',
-    'otro': 'Otro',
-};
-
-
 export default function AnalysisPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = React.useState(false);
@@ -53,6 +36,29 @@ export default function AnalysisPage() {
     const [causeFilter, setCauseFilter] = React.useState("");
 
     const [mapData, setMapData] = React.useState<[number, number, number][] | null>(null);
+    
+    const [typeOptions, setTypeOptions] = React.useState<SettingItem[]>([]);
+    const [causeOptions, setCauseOptions] = React.useState<SettingItem[]>([]);
+
+    React.useEffect(() => {
+        const fetchDropdownOptions = async () => {
+            try {
+                const settings = await getSettings();
+                if (settings) {
+                    setTypeOptions(settings.accidentTypes || []);
+                    setCauseOptions(settings.accidentCauses || []);
+                }
+            } catch (error) {
+                console.error("Error fetching settings for filters:", error);
+                toast({
+                    variant: "destructive",
+                    title: "Error de Configuración",
+                    description: "No se pudieron cargar las opciones de filtro.",
+                });
+            }
+        };
+        fetchDropdownOptions();
+    }, [toast]);
 
     const handleClearFilters = () => {
         setDateFilter(undefined);
@@ -160,7 +166,7 @@ export default function AnalysisPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button
@@ -202,8 +208,8 @@ export default function AnalysisPage() {
                         <Select value={typeFilter} onValueChange={setTypeFilter}>
                             <SelectTrigger><SelectValue placeholder="Filtrar por tipo" /></SelectTrigger>
                             <SelectContent>
-                                {Object.entries(typeLabels).map(([value, label]) => (
-                                     <SelectItem key={value} value={value}>{label}</SelectItem>
+                                {typeOptions.map((option) => (
+                                     <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
@@ -211,11 +217,12 @@ export default function AnalysisPage() {
                         <Select value={causeFilter} onValueChange={setCauseFilter}>
                             <SelectTrigger><SelectValue placeholder="Filtrar por causa" /></SelectTrigger>
                             <SelectContent>
-                                 {Object.entries(causeLabels).map(([value, label]) => (
-                                     <SelectItem key={value} value={value}>{label}</SelectItem>
+                                 {causeOptions.map((option) => (
+                                     <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
+                        <Button variant="ghost" onClick={handleClearFilters}>Limpiar Filtros</Button>
                     </div>
                 </CardContent>
                 <CardFooter className="gap-2">
@@ -223,7 +230,6 @@ export default function AnalysisPage() {
                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
                         Analizar Datos
                     </Button>
-                    <Button variant="ghost" onClick={handleClearFilters}>Limpiar Filtros</Button>
                 </CardFooter>
             </Card>
 
@@ -268,8 +274,8 @@ export default function AnalysisPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {analysisResult.criticalZones.map((zone) => (
-                                            <TableRow key={zone.location}>
+                                        {analysisResult.criticalZones.map((zone, index) => (
+                                            <TableRow key={index}>
                                                 <TableCell className="font-medium">{zone.location}</TableCell>
                                                 <TableCell className="text-center">{zone.accidentCount}</TableCell>
                                                 <TableCell>{zone.analysisPeriod}</TableCell>
