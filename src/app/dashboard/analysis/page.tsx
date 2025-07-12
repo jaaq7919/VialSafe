@@ -11,7 +11,6 @@ import { cn } from "@/lib/utils";
 import { Calendar as CalendarIcon, FilterX } from "lucide-react";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
-import type { DateRange } from "react-day-picker";
 import { getSettings, type SettingItem } from '@/services/settings';
 import { useToast } from "@/hooks/use-toast";
 
@@ -23,7 +22,8 @@ export default function AnalysisPage() {
 
     const [causeFilter, setCauseFilter] = useState("");
     const [typeFilter, setTypeFilter] = useState("");
-    const [dateFilter, setDateFilter] = useState<DateRange | undefined>();
+    const [startDate, setStartDate] = useState<Date | undefined>();
+    const [endDate, setEndDate] = useState<Date | undefined>();
 
     useEffect(() => {
         const fetchSettingsForFilters = async () => {
@@ -48,7 +48,8 @@ export default function AnalysisPage() {
     const handleClearFilters = () => {
         setCauseFilter("");
         setTypeFilter("");
-        setDateFilter(undefined);
+        setStartDate(undefined);
+        setEndDate(undefined);
     };
 
     return (
@@ -68,42 +69,56 @@ export default function AnalysisPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
                         <div className="flex flex-col gap-2">
-                             <label className="text-sm font-medium">Rango de Fechas</label>
+                             <label className="text-sm font-medium">Fecha de Inicio</label>
                              <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
-                                        id="date"
                                         variant={"outline"}
                                         className={cn(
                                             "justify-start text-left font-normal",
-                                            !dateFilter && "text-muted-foreground"
+                                            !startDate && "text-muted-foreground"
                                         )}
                                     >
                                         <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {dateFilter?.from ? (
-                                            dateFilter.to ? (
-                                                <>
-                                                    {format(dateFilter.from, "LLL dd, y", { locale: es })} -{" "}
-                                                    {format(dateFilter.to, "LLL dd, y", { locale: es })}
-                                                </>
-                                            ) : (
-                                                format(dateFilter.from, "LLL dd, y", { locale: es })
-                                            )
-                                        ) : (
-                                            <span>Seleccione un rango</span>
-                                        )}
+                                        {startDate ? format(startDate, "PPP", { locale: es }) : <span>Seleccione fecha</span>}
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="start">
                                     <Calendar
+                                        mode="single"
+                                        selected={startDate}
+                                        onSelect={setStartDate}
+                                        disabled={(date) => date > new Date() || (endDate ? date > endDate : false)}
                                         initialFocus
-                                        mode="range"
-                                        defaultMonth={dateFilter?.from}
-                                        selected={dateFilter}
-                                        onSelect={setDateFilter}
-                                        numberOfMonths={2}
+                                        locale={es}
+                                    />
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                         <div className="flex flex-col gap-2">
+                             <label className="text-sm font-medium">Fecha de Fin</label>
+                             <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                            "justify-start text-left font-normal",
+                                            !endDate && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {endDate ? format(endDate, "PPP", { locale: es }) : <span>Seleccione fecha</span>}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={endDate}
+                                        onSelect={setEndDate}
+                                        disabled={(date) => date > new Date() || (startDate ? date < startDate : false)}
+                                        initialFocus
                                         locale={es}
                                     />
                                 </PopoverContent>
