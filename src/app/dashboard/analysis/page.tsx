@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from "react";
@@ -113,7 +112,7 @@ export default function AnalysisPage() {
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Análisis de Zonas Críticas</h1>
                 <p className="text-muted-foreground mt-1">
-                    Este módulo utiliza inteligencia artificial para analizar el historial de accidentes y descubrir puntos de alta siniestralidad. Filtre los datos, ejecute el análisis y la IA agrupará los incidentes geográficamente, identificando las intersecciones y tramos viales que requieren mayor atención.
+                    Este módulo utiliza un algoritmo de clustering (DBSCAN) para encontrar agrupaciones geográficas de accidentes y luego usa IA para interpretar y describir estos hallazgos, identificando las zonas que requieren mayor atención.
                 </p>
             </div>
 
@@ -197,16 +196,16 @@ export default function AnalysisPage() {
                     <CardHeader>
                         <CardTitle>Resultados del Análisis IA</CardTitle>
                         <CardDescription>
-                            Puntos de alta siniestralidad procesados por la IA.
+                            Puntos de alta siniestralidad procesados por DBSCAN e interpretados por la IA.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         {isLoading && (
                              <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-8">
                                 <Loader2 className="w-12 h-12 mb-4 animate-spin text-primary" />
-                                <h3 className="text-lg font-semibold text-foreground">Contactando a la IA...</h3>
+                                <h3 className="text-lg font-semibold text-foreground">Procesando datos...</h3>
                                 <p className="mt-2 max-w-md">
-                                    Procesando historial de accidentes para identificar patrones y zonas críticas.
+                                    Ejecutando clustering espacial con DBSCAN y luego enviando los resultados a la IA para su interpretación.
                                 </p>
                             </div>
                         )}
@@ -228,8 +227,8 @@ export default function AnalysisPage() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Ubicación Crítica</TableHead>
-                                            <TableHead className="text-center">Nº</TableHead>
-                                            <TableHead>Periodo</TableHead>
+                                            <TableHead className="text-center">Nº Accidentes</TableHead>
+                                            <TableHead>Justificación IA</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -237,7 +236,7 @@ export default function AnalysisPage() {
                                             <TableRow key={index}>
                                                 <TableCell className="font-medium">{zone.location}</TableCell>
                                                 <TableCell className="text-center">{zone.accidentCount}</TableCell>
-                                                <TableCell>{zone.analysisPeriod}</TableCell>
+                                                <TableCell>{zone.reason}</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
