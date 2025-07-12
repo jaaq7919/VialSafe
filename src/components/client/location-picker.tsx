@@ -31,40 +31,51 @@ const addressPrefixMap: { [key: string]: string[] } = {
 const extractAddress = (osmData: any): { prefix: string, street: string } | null => {
     if (!osmData || !osmData.address) return null;
 
-    const { road, highway, suburb, house_number, neighbourhood } = osmData.address;
+    const { road, highway, suburb, house_number, neighbourhood, intersection } = osmData.address;
 
-    let mainStreet = road || highway || neighbourhood || suburb || '';
+    let mainStreet = road || highway || intersection || neighbourhood || suburb || '';
     if (!mainStreet) return null;
+    
+    // Capitalize words function
+    const capitalize = (s: string) => s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    
+    mainStreet = capitalize(mainStreet);
 
     let prefix = 'CLL'; // Default prefix
 
+    // Find prefix from the main street name
+    const mainStreetLower = mainStreet.toLowerCase();
     for (const [key, keywords] of Object.entries(addressPrefixMap)) {
-        if (keywords.some(kw => mainStreet.toLowerCase().includes(kw))) {
+        if (keywords.some(kw => mainStreetLower.startsWith(kw))) {
             prefix = key;
-            break;
+            break; 
         }
     }
 
-    // Clean up the street name
-    mainStreet = mainStreet.replace(/^(calle|carrera|avenida|diagonal|transversal|autopista|kilómetro|bulevar|cll|cra|cr|av|ave|dg|tr|trv|tv|aut|km|ac|ak|blv|bv)\s+/i, '').trim();
+    // Clean up the street name from prefixes
+    mainStreet = mainStreet.replace(/^(Calle|Carrera|Avenida|Diagonal|Transversal|Autopista|Kilómetro|Bulevar|Cll|Cra|Cr|Av|Ave|Dg|Tr|Trv|Tv|Aut|Km|Ac|Ak|Blv|Bv)\s+/i, '').trim();
+
+    // If there's an intersection in the data, it's more reliable
+    if (intersection) {
+        mainStreet = capitalize(intersection.replace(' y ', ' con '));
+    } else if (osmData.display_name) {
+        // Fallback to display_name for intersections
+        const displayName = osmData.display_name.toLowerCase();
+        const parts = displayName.split(',').map(p => p.trim());
+        const streetParts = parts.filter(p => /\d/.test(p) && (p.includes('calle') || p.includes('carrera') || p.includes('avenida')));
+        
+        if (streetParts.length > 1) {
+             const cleanedParts = streetParts.map(p => capitalize(p.replace(/^(calle|carrera|avenida)\s+/i, ''))).slice(0, 2);
+             mainStreet = cleanedParts.join(' con ');
+        }
+    }
+
+
     if(house_number) {
         mainStreet = `${mainStreet} #${house_number}`;
     }
 
-    // Attempt to find intersecting street if available in display_name
-    const displayName = osmData.display_name.toLowerCase();
-    const parts = displayName.split(',').map(p => p.trim());
-    const streetParts = parts.filter(p => /\d/.test(p) && (p.includes('calle') || p.includes('carrera') || p.includes('avenida')));
-    
-    let street = mainStreet;
-    if(streetParts.length > 1) {
-       street = streetParts.join(' con ').replace(/calle/g, 'Calle').replace(/carrera/g, 'Carrera').replace(/\s+/g, ' ').trim();
-    }
-    
-    // Capitalize words
-    street = street.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-
-    return { prefix, street };
+    return { prefix, street: mainStreet };
 };
 
 
