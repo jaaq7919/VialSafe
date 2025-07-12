@@ -35,6 +35,8 @@ export const crossingLabels: { [key: string]: string } = {
     'inexistente': 'Inexistente',
 };
 
+const ROWS_PER_PAGE = 10;
+
 export default function ReportsPage() {
     const { toast } = useToast();
     const router = useRouter();
@@ -44,6 +46,8 @@ export default function ReportsPage() {
     const [locationFilter, setLocationFilter] = useState("");
     const [causeFilter, setCauseFilter] = useState("");
     const [dateFilter, setDateFilter] = useState<DateRange | undefined>();
+    
+    const [currentPage, setCurrentPage] = useState(1);
     
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [accidentIdToDelete, setAccidentIdToDelete] = useState<string | null>(null);
@@ -97,6 +101,7 @@ export default function ReportsPage() {
     }, [fetchAccidents, fetchSettings]);
     
     const filteredAccidents = useMemo(() => {
+        setCurrentPage(1); // Reset page to 1 on filter change
         return accidents.filter(accident => {
             if (!accident.dateTime) return false;
             const accidentDate = new Date(accident.dateTime);
@@ -112,6 +117,14 @@ export default function ReportsPage() {
             return dateMatch && locationMatch && causeMatch;
         });
     }, [accidents, locationFilter, causeFilter, dateFilter]);
+
+    const totalPages = Math.ceil(filteredAccidents.length / ROWS_PER_PAGE);
+    const paginatedAccidents = useMemo(() => {
+        const startIndex = (currentPage - 1) * ROWS_PER_PAGE;
+        const endIndex = startIndex + ROWS_PER_PAGE;
+        return filteredAccidents.slice(startIndex, endIndex);
+    }, [filteredAccidents, currentPage]);
+
 
     const handleEdit = (accidentId: string) => {
         router.push(`/dashboard/accidents?edit=${accidentId}`);
@@ -305,8 +318,8 @@ export default function ReportsPage() {
                                             <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                                         </TableCell>
                                     </TableRow>
-                                ) : filteredAccidents.length > 0 ? (
-                                    filteredAccidents.map((accident) => (
+                                ) : paginatedAccidents.length > 0 ? (
+                                    paginatedAccidents.map((accident) => (
                                         <TableRow key={accident.id}>
                                             <TableCell className="font-medium">{accident.addressPrefix} {accident.address}</TableCell>
                                             <TableCell>{accident.dateTime ? format(new Date(accident.dateTime), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
@@ -345,6 +358,27 @@ export default function ReportsPage() {
                                 )}
                             </TableBody>
                         </Table>
+                    </div>
+                     <div className="flex items-center justify-end space-x-2 py-4">
+                        <span className="text-sm text-muted-foreground">
+                            Página {totalPages > 0 ? currentPage : 0} de {totalPages}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            disabled={currentPage === 1}
+                        >
+                            Anterior
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            disabled={currentPage === totalPages}
+                        >
+                            Siguiente
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
@@ -426,3 +460,5 @@ export default function ReportsPage() {
         </>
     );
 }
+
+    
