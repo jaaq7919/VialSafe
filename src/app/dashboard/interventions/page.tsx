@@ -95,9 +95,12 @@ export default function InterventionsPage() {
             const { analyzeCriticalZones } = await import('@/ai/flows/analyze-critical-zones');
             const { suggestRoadInterventions } = await import('@/ai/flows/suggest-road-interventions');
 
+            const allDates = allAccidents.map(acc => new Date(acc.dateTime));
+            const analysisPeriod = `del ${format(min(allDates), 'yyyy-MM-dd')} al ${format(max(allDates), 'yyyy-MM-dd')}`;
+
             const analysisResult = await analyzeCriticalZones({
                 accidentClusters,
-                analysisPeriod: 'Periodo Completo',
+                analysisPeriod: analysisPeriod,
             });
 
             if (!analysisResult || analysisResult.criticalZones.length === 0) {
