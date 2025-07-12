@@ -31,26 +31,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const fetchUserProfile = async (user: User) => {
+        const userDocRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+            const profileData = userDoc.data();
+            setUserProfile({
+                uid: user.uid,
+                firstName: profileData.firstName,
+                lastName: profileData.lastName,
+                role: profileData.role,
+                avatarUrl: profileData.avatarUrl,
+                initials: profileData.initials,
+            } as UserProfile);
+        } else {
+            console.warn(`No user profile found in Firestore for UID: ${user.uid}`);
+            setUserProfile(null);
+        }
+    };
+    
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             setLoading(true);
             if (user) {
                 setUser(user);
-                const userDocRef = doc(db, "users", user.uid);
-                const userDoc = await getDoc(userDocRef);
-                if (userDoc.exists()) {
-                    const profileData = userDoc.data();
-                    setUserProfile({
-                        uid: user.uid,
-                        firstName: profileData.firstName,
-                        lastName: profileData.lastName,
-                        role: profileData.role,
-                        avatarUrl: profileData.avatarUrl,
-                        initials: profileData.initials,
-                    } as UserProfile);
-                } else {
-                     setUserProfile(null);
-                }
+                await fetchUserProfile(user);
             } else {
                 setUser(null);
                 setUserProfile(null);
@@ -61,11 +66,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return () => unsubscribe();
     }, []);
 
-    const login = (email: string, pass: string) => {
-        return signInWithEmailAndPassword(auth, email, pass);
+    const login = async (email: string, pass: string) => {
+        const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+        if (userCredential.user) {
+            await fetchUserProfile(userCredential.user);
+        }
+        return userCredential;
     };
 
     const logout = () => {
+        setUser(null);
+        setUserProfile(null);
         return signOut(auth);
     };
 

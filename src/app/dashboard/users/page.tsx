@@ -59,7 +59,6 @@ const userSchema = z.object({
   email: z.string().email("Debe ser un correo electrónico válido."),
   phone: z.string().min(7, "El número de celular no es válido."),
   role: z.enum(["Administrador", "Analista de Tráfico", "Operador de Tráfico"], { required_error: "Debe seleccionar un rol." }),
-  password: z.string().optional(),
 });
 
 type User = UserProfile;
@@ -115,13 +114,13 @@ export default function UsersPage() {
 
   const handleAddNew = () => {
     setEditingUser(null);
-    form.reset({ firstName: "", lastName: "", documentNumber: "", email: "", phone: "", role: undefined, password: "" });
+    form.reset({ firstName: "", lastName: "", documentNumber: "", email: "", phone: "", role: undefined });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
-    form.reset({ ...user, password: "" }); // Password is not fetched, so it's empty in edit mode
+    form.reset({ ...user });
     setIsDialogOpen(true);
   };
 
@@ -162,12 +161,10 @@ export default function UsersPage() {
           description: `Los datos de ${values.firstName} ${values.lastName} han sido actualizados.`,
         });
       } else {
-        const tempPassword = Math.random().toString(36).slice(-8);
         await addUser(values);
         toast({
           title: "Perfil de Usuario Creado",
-          description: `El perfil para ${values.firstName} ha sido creado. Contraseña temporal sugerida: ${tempPassword}. Recuerde crear la cuenta en Firebase Auth.`,
-          duration: 15000,
+          description: `El perfil para ${values.firstName} ha sido creado. Recuerde crear la cuenta en Firebase Auth.`,
         });
       }
       fetchUsers();
