@@ -9,7 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Loader2, AlertTriangle, Lightbulb, Calendar as CalendarIcon } from "lucide-react";
-import { type Accident, getAccidents } from "@/services/accidents";
+import { getAccidents } from "@/services/accidents";
 import { getSettings, type SettingItem } from "@/services/settings";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ import { es } from 'date-fns/locale';
 import type { DateRange } from "react-day-picker";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones";
+import { handleAnalysis } from "./actions";
 
 export default function AnalysisPage() {
     const { toast } = useToast();
@@ -59,7 +60,7 @@ export default function AnalysisPage() {
         setCauseFilter("");
     };
 
-    const handleAnalyze = async () => {
+    const onAnalyze = async () => {
         setIsLoading(true);
         setError(null);
         setAnalysisResult(null);
@@ -86,45 +87,12 @@ export default function AnalysisPage() {
                 return dateMatch && typeMatch && causeMatch;
             });
             
-            if (filteredAccidents.length === 0) {
-                 setError("No se encontraron accidentes con los filtros aplicados. Pruebe con criterios más amplios.");
-                 setIsLoading(false);
-                 return;
-            }
+            const response = await handleAnalysis(filteredAccidents, dateFilter);
 
-            const headers = "ubicacion,fecha,hora,tipo,causa,estado_cruce,observaciones,latitud,longitud";
-            const csvData = filteredAccidents.map(acc => {
-                const accDate = new Date(acc.dateTime);
-                return [
-                    `"${acc.addressPrefix} ${acc.address}"`,
-                    `"${format(accDate, 'yyyy-MM-dd')}"`,
-                    `"${format(accDate, 'HH:mm')}"`,
-                    `"${acc.type}"`,
-                    `"${acc.cause}"`,
-                    `"${acc.crossingStatus}"`,
-                    `"${acc.observations || ''}"`,
-                    `"${acc.latitude}"`,
-                    `"${acc.longitude}"`
-                ].join(',');
-            }).join('\\n');
-            const historicalAccidentData = `${headers}\\n${csvData}`;
-            
-            const fromDate = dateFilter?.from ? format(dateFilter.from, 'yyyy-MM-dd') : 'inicio';
-            const toDate = dateFilter?.to ? format(dateFilter.to, 'yyyy-MM-dd') : 'fin';
-            const criteria = `Analizar accidentes entre ${fromDate} y ${toDate}. Considerar una zona como crítica si tiene más de 2 accidentes.`;
-
-            // Lazily import and call the server action here.
-            const { analyzeCriticalZones } = await import('@/ai/flows/analyze-critical-zones');
-
-            const result = await analyzeCriticalZones({
-                historicalAccidentData,
-                criteria,
-            });
-
-            if(result.criticalZones.length === 0) {
-                 setError("La IA no identificó zonas críticas con los filtros seleccionados. Los datos no superan los umbrales de criticidad.");
-            } else {
-                 setAnalysisResult(result);
+            if (response.error) {
+                setError(response.error);
+            } else if (response.result) {
+                setAnalysisResult(response.result);
             }
 
         } catch (e) {
@@ -217,7 +185,7 @@ export default function AnalysisPage() {
                     </div>
                 </CardContent>
                 <CardFooter className="gap-2">
-                     <Button onClick={handleAnalyze} disabled={isLoading}>
+                     <Button onClick={onAnalyze} disabled={isLoading}>
                         {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lightbulb className="mr-2 h-4 w-4" />}
                         Analizar Datos
                     </Button>
