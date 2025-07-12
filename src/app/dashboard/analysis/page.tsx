@@ -221,7 +221,7 @@ export default function AnalysisPage() {
                         <Loader2 className="w-12 h-12 mb-4 animate-spin text-primary" />
                         <h3 className="text-lg font-semibold text-foreground">Analizando datos...</h3>
                         <p className="mt-2 max-w-md">
-                           Identificando clusters geográficos con DBSCAN. Esto puede tardar unos segundos.
+                           Identificando clusters geográficos con DBSCAN y consultando al analista de IA. Esto puede tardar unos segundos.
                         </p>
                     </div>
                 )}

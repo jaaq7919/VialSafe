@@ -4,6 +4,7 @@
 import { getAccidents, type Accident } from "@/services/accidents";
 import { dbscan } from "@/lib/dbscan";
 import { format, min, max, differenceInDays } from 'date-fns';
+import type { AnalyzeCriticalZonesInput, AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones";
 
 interface AnalysisFilters {
     startDate?: string;
@@ -19,7 +20,7 @@ export interface CriticalZone {
     period: string;
     causeSummary: string;
     accidentDatesSummary: string;
-    points: [number, number, number][]; // [lat, lng, intensity]
+    points: [number, number][];
     center: [number, number];
 }
 
@@ -76,64 +77,82 @@ export async function runDbscanAnalysis(filters: AnalysisFilters): Promise<{ ana
         });
 
         const significantClusters = clusters.filter(c => c && c.length > 0);
-
+        
         if (significantClusters.length === 0) {
             return { analysis: { criticalZones: [], summary: "Análisis completado. No se encontraron agrupaciones de accidentes (zonas críticas) con los criterios actuales." } };
         }
         
-        const criticalZones: CriticalZone[] = significantClusters.map((cluster) => {
-            const accidentCount = cluster.length;
-            
+        const { analyzeCriticalZones } = await import('@/ai/flows/analyze-critical-zones');
+
+        const accidentClustersForAI = significantClusters.map((cluster, index) => {
+             const accidentCount = cluster.length;
             const locations = cluster.map(acc => `${acc.addressPrefix} ${acc.address}`);
             const locationCounts = locations.reduce((acc, loc) => { acc[loc] = (acc[loc] || 0) + 1; return acc; }, {} as {[key: string]: number});
             const representativeLocation = Object.keys(locationCounts).reduce((a, b) => locationCounts[a] > locationCounts[b] ? a : b);
-            
             const causes = cluster.map(acc => acc.cause);
             const causeCounts = causes.reduce((acc, cause) => { acc[cause] = (acc[cause] || 0) + 1; return acc; }, {} as {[key: string]: number});
             const causeSummary = Object.entries(causeCounts).map(([cause, count]) => `${count} por ${cause}`).join(', ');
-
-            const topCause = Object.keys(causeCounts).reduce((a, b) => causeCounts[a] > causeCounts[b] ? a : b, 'desconocida');
-
             const dates = cluster.map(acc => new Date(acc.dateTime));
+            const period = `${format(min(dates), 'yyyy-MM-dd')} a ${format(max(dates), 'yyyy-MM-dd')}`;
+            
+            return {
+                clusterId: index,
+                accidentCount,
+                representativeLocation,
+                causeSummary,
+                period
+            };
+        });
+
+        const analysisPeriod = (filters.startDate && filters.endDate) 
+            ? `del ${filters.startDate} al ${filters.endDate}` 
+            : 'de todo el periodo histórico';
+            
+        const aiInput: AnalyzeCriticalZonesInput = {
+            accidentClusters: accidentClustersForAI,
+            analysisPeriod: analysisPeriod
+        };
+        
+        const aiResult: AnalyzeCriticalZonesOutput = await analyzeCriticalZones(aiInput);
+        
+        const criticalZones: CriticalZone[] = aiResult.criticalZones.map((zone) => {
+            // Find the original cluster that corresponds to this AI-analyzed zone
+            const originalCluster = significantClusters.find(c => {
+                 const locations = c.map(acc => `${acc.addressPrefix} ${acc.address}`);
+                 const locationCounts = locations.reduce((acc, loc) => { acc[loc] = (acc[loc] || 0) + 1; return acc; }, {} as {[key: string]: number});
+                 const representativeLocation = Object.keys(locationCounts).reduce((a, b) => locationCounts[a] > locationCounts[b] ? a : b);
+                 return representativeLocation === zone.location;
+            });
+            
+            if (!originalCluster) return null;
+
+            const dates = originalCluster.map(acc => new Date(acc.dateTime));
             const minDate = min(dates);
             const maxDate = max(dates);
-            const period = `${format(minDate, 'yyyy-MM-dd')} a ${format(maxDate, 'yyyy-MM-dd')}`;
-            const daysDiff = differenceInDays(maxDate, minDate);
-
-            const accidentDates = dates.map(d => format(d, 'yyyy-MM-dd')).join(', ');
-
-            const clusterPoints: [number, number, number][] = cluster.map(acc => [acc.latitude, acc.longitude, 1]);
+            
+            const clusterPoints: [number, number][] = originalCluster.map(acc => [acc.latitude, acc.longitude]);
             const center: [number, number] = [
-                cluster.reduce((sum, acc) => sum + acc.latitude, 0) / cluster.length,
-                cluster.reduce((sum, acc) => sum + acc.longitude, 0) / cluster.length
+                originalCluster.reduce((sum, acc) => sum + acc.latitude, 0) / originalCluster.length,
+                originalCluster.reduce((sum, acc) => sum + acc.longitude, 0) / originalCluster.length
             ];
+            
+            const causes = originalCluster.map(acc => acc.cause);
+            const causeCounts = causes.reduce((acc, cause) => { acc[cause] = (acc[cause] || 0) + 1; return acc; }, {} as {[key: string]: number});
 
-
-            let reason = `Alta concentración de ${accidentCount} accidentes.`;
-            if (topCause !== 'desconocida') {
-                reason += ` La causa principal es "${topCause.replace(/-/g, ' ')}".`;
-            }
-            if (daysDiff <= 30 && accidentCount > 2) {
-                reason += ` Ocurrieron en un corto período de tiempo.`;
-            } else if (daysDiff > 180) {
-                reason += ` Se han registrado de forma recurrente en el tiempo.`
-            }
 
             return { 
-                location: representativeLocation,
-                accidentCount, 
-                reason,
-                period,
-                causeSummary,
-                accidentDatesSummary: accidentDates,
+                location: zone.location,
+                accidentCount: zone.accidentCount,
+                reason: zone.reason,
+                period: `${format(minDate, 'yyyy-MM-dd')} a ${format(maxDate, 'yyyy-MM-dd')}`,
+                causeSummary: Object.entries(causeCounts).map(([cause, count]) => `${count} por ${cause}`).join(', '),
+                accidentDatesSummary: dates.map(d => format(d, 'yyyy-MM-dd')).join(', '),
                 points: clusterPoints,
                 center,
             };
-        });
+        }).filter((z): z is CriticalZone => z !== null);
         
-        const summary = `Se identificaron ${criticalZones.length} zonas críticas. La zona con más incidentes es "${criticalZones.reduce((a,b) => a.accidentCount > b.accidentCount ? a : b).location}" con ${criticalZones.reduce((a,b) => a.accidentCount > b.accidentCount ? a : b).accidentCount} accidentes.`;
-
-        return { analysis: { criticalZones, summary } };
+        return { analysis: { criticalZones, summary: aiResult.summary } };
 
     } catch (error) {
         console.error("Error in runDbscanAnalysis: ", error);

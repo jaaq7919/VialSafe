@@ -58,7 +58,7 @@ export default function InterventionsPage() {
                 return;
             }
 
-            const points = allAccidents.map(acc => [acc.latitude, acc.longitude]);
+            const points = allAccidents.map(acc => [acc.latitude, acc.longitude] as [number, number]);
             const clusterAssignments = dbscan(points, 0.0005, 2);
 
             const clusters: Accident[][] = [];
@@ -71,13 +71,13 @@ export default function InterventionsPage() {
                 }
             });
 
-             if (!clusters || clusters.filter(c => c.length > 0).length === 0) {
+             if (!clusters || clusters.filter(c => c && c.length > 0).length === 0) {
                 setError('El algoritmo DBSCAN no encontró agrupaciones geográficas significativas con los datos seleccionados.');
                 setIsLoading(false);
                 return;
             }
 
-            const accidentClusters = clusters.filter(c => c.length > 0).map((cluster, index) => {
+            const accidentClusters = clusters.filter(c => c && c.length > 0).map((cluster, index) => {
                 const accidentCount = cluster.length;
                 const locations = cluster.map(acc => `${acc.addressPrefix} ${acc.address}`);
                 const locationCounts = locations.reduce((acc, loc) => { acc[loc] = (acc[loc] || 0) + 1; return acc; }, {} as {[key: string]: number});

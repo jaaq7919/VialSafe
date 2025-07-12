@@ -32,7 +32,7 @@ export default function AnalysisMap({ zones }: AnalysisMapProps) {
     const mapRef = useRef<L.Map | null>(null);
     const layersRef = useRef<L.LayerGroup | null>(null);
 
-    // Set up default icon for markers (though we use circles)
+    // Set up default icon for markers
     useEffect(() => {
         const iconDefault = L.icon({
             iconRetinaUrl: iconRetinaUrl.src,
