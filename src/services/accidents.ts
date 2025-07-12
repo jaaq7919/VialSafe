@@ -8,20 +8,20 @@ import { formSchema } from '@/app/dashboard/accidents/page';
 
 
 // Este tipo representa la estructura del documento en Firestore.
-// Los Timestamps se convierten a Date para ser pasados a componentes de cliente.
+// Los Timestamps se convierten a strings (ISO) para ser pasados a componentes de cliente de forma segura.
 export type Accident = {
   id: string;
   addressPrefix: string;
   address: string;
   location: string;
-  dateTime: Date;
+  dateTime: string; // Changed from Date to string
   type: string;
   cause: string;
   crossingStatus: string;
   observations?: string;
   latitude: number;
   longitude: number;
-  createdAt: Date;
+  createdAt: string; // Changed from Date to string
   createdBy: string;
 };
 
@@ -36,8 +36,8 @@ export async function getAccidents(): Promise<Accident[]> {
     return {
       id: doc.id,
       ...data,
-      dateTime: (data.dateTime as Timestamp).toDate(),
-      createdAt: (data.createdAt as Timestamp).toDate(),
+      dateTime: (data.dateTime as Timestamp).toDate().toISOString(),
+      createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
     } as Accident;
   });
 }
@@ -53,8 +53,8 @@ export async function getAccident(id: string): Promise<Accident | null> {
     return {
         id: docSnap.id,
         ...data,
-        dateTime: (data.dateTime as Timestamp).toDate(),
-        createdAt: (data.createdAt as Timestamp).toDate(),
+        dateTime: (data.dateTime as Timestamp).toDate().toISOString(),
+        createdAt: (data.createdAt as Timestamp).toDate().toISOString(),
     } as Accident;
 }
 
@@ -111,5 +111,3 @@ export async function deleteAccident(id: string) {
     throw new Error("Failed to delete accident from the database.");
   }
 }
-
-    

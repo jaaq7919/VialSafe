@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Loader2, Calendar as CalendarIcon, FileDown, MoreHorizontal, FilePenLine, Trash2, PlusCircle, Eye } from "lucide-react";
-import { getAccidents, type Accident } from "@/services/accidents";
+import { getAccidents, deleteAccident, type Accident } from "@/services/accidents";
 import { getSettings, type SettingItem } from '@/services/settings';
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
