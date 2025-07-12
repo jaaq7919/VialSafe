@@ -19,6 +19,7 @@ import {
   FileDown,
   Route,
   Settings,
+  Upload,
 } from "lucide-react";
 
 type Role = UserProfile['role'];
@@ -65,6 +66,12 @@ const navItems = [
     label: "Generar Reportes",
     icon: FileDown,
     roles: ["Administrador", "Analista de Tráfico", "Operador de Tráfico"],
+  },
+    {
+    href: "/dashboard/import",
+    label: "Importación Masiva",
+    icon: Upload,
+    roles: ["Administrador", "Analista de Tráfico"],
   },
   {
     href: "/dashboard/users",
