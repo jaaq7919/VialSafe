@@ -56,6 +56,9 @@ export default function AnalysisPage() {
         setTypeFilter("all");
         setStartDate(undefined);
         setEndDate(undefined);
+        setWasAnalyzed(false);
+        setAnalysisResult(null);
+        setAnalysisError(null);
     };
 
     const handleAnalyze = async () => {
@@ -65,19 +68,21 @@ export default function AnalysisPage() {
         setAnalysisError(null);
         try {
             const filters = {
-                startDate: startDate?.toISOString(),
-                endDate: endDate?.toISOString(),
+                startDate: startDate?.toISOString().split('T')[0],
+                endDate: endDate?.toISOString().split('T')[0],
                 type: typeFilter === 'all' ? undefined : typeFilter,
                 cause: causeFilter === 'all' ? undefined : causeFilter,
             };
             const result = await runDbscanAnalysis(filters);
-            if (result.clusters && result.clusters.length > 0) {
-                 setAnalysisResult(result.clusters);
-            } else if (result.error) {
+            
+            if (result.error) {
                 setAnalysisError(result.error);
-            } else {
-                 setAnalysisResult([]); // No clusters found
+                setAnalysisResult(null);
+            } else if (result.clusters) {
+                 setAnalysisResult(result.clusters);
+                 setAnalysisError(null);
             }
+
         } catch (error) {
             console.error("Analysis failed", error);
             setAnalysisError("Ocurrió un error inesperado durante el análisis. Por favor, inténtelo de nuevo.");
@@ -215,7 +220,7 @@ export default function AnalysisPage() {
                     </div>
                 )}
 
-                {analysisError && (
+                {analysisError && !isLoading && (
                     <Alert variant="destructive">
                         <OctagonAlert className="h-4 w-4" />
                         <AlertTitle>Error en el Análisis</AlertTitle>

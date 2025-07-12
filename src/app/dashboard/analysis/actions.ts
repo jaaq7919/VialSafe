@@ -18,7 +18,7 @@ export interface Cluster {
     representativeLocation: string;
     causeSummary: string;
     period: string;
-    accidentDatesSummary: string; // Nuevo campo
+    accidentDatesSummary: string;
     accidents: Accident[];
 }
 
@@ -51,7 +51,7 @@ export async function runDbscanAnalysis(filters: AnalysisFilters): Promise<{ clu
         });
 
         if (filteredAccidents.length < 2) {
-            return { error: 'Se necesitan al menos 2 accidentes para realizar un análisis de cluster. Amplíe sus filtros.' };
+            return { error: 'Se necesitan al menos 2 accidentes que coincidan con los filtros para realizar un análisis. Pruebe ampliando los criterios.' };
         }
 
         // 3. Prepare points for DBSCAN
