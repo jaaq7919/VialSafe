@@ -80,7 +80,7 @@ export default function InterventionsPage() {
         <>
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Prueba de Conexión con IA</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">TEST IA FUNCIONANDO</h1>
                     <p className="text-muted-foreground mt-1">
                         Verifique la conexión con el modelo de IA de Google.
                     </p>
