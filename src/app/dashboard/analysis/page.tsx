@@ -243,6 +243,18 @@ export default function AnalysisPage() {
                                 <Card className="mb-6">
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
+                                            <FileText className="w-5 h-5" />
+                                            Resumen General del Análisis
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-sm text-muted-foreground">{analysisResult.summary}</p>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="mb-6">
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
                                             <Map className="w-5 h-5" />
                                             Mapa de Calor de Zonas Críticas
                                         </CardTitle>
@@ -253,18 +265,6 @@ export default function AnalysisPage() {
                                         </div>
                                     </CardContent>
                                 </Card>
-                                
-                                 <Card className="mb-6">
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <FileText className="w-5 h-5" />
-                                            Resumen General del Análisis
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <p className="text-sm text-muted-foreground">{analysisResult.summary}</p>
-                                    </CardContent>
-                                 </Card>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {analysisResult.criticalZones.map((zone, index) => (
