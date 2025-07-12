@@ -60,13 +60,13 @@ import React, { useMemo, useEffect, useState, useCallback } from "react";
 import type { DateRange } from "react-day-picker";
 import { Textarea } from "@/components/ui/textarea";
 import { getAccidents, addAccident, updateAccident, type Accident } from '@/services/accidents';
+import { getSettings, type SettingItem } from '@/services/settings';
 import dynamic from 'next/dynamic';
 
 const LocationPicker = dynamic(() => import('@/components/client/location-picker'), {
     ssr: false,
     loading: () => <div className="h-[400px] w-full rounded-md bg-muted flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
 });
-
 
 const addressPrefixes = [
     { value: 'CLL', label: 'CLL - Calle' },
@@ -114,29 +114,6 @@ export const formSchema = z.object({
     path: ["address"], 
 });
 
-
-// MOCK DATA - In a real app, this would come from a global state or API call to the settings data
-const causeOptions = [
-    { value: 'exceso-velocidad', label: 'Exceso de Velocidad' },
-    { value: 'distraccion', label: 'Conducción Distraída' },
-    { value: 'alcohol', label: 'Conducir Bajo Influencia (CBI)' },
-    { value: 'clima', label: 'Condiciones Climáticas' },
-    { value: 'imprudencia', label: 'Imprudencia del Conductor' },
-    { value: 'falla-mecanica', label: 'Falla Mecánica' },
-    { value: 'otro', label: 'Otro' },
-];
-
-const typeOptions = [
-    { value: 'colision', label: 'Colisión' },
-    { value: 'atropello', label: 'Atropello' },
-    { value: 'caida-ocupante', label: 'Caída de Ocupante' },
-    { value: 'volcamiento', label: 'Volcamiento' },
-    { value: 'otro', label: 'Otro' },
-];
-
-export const causeLabels: { [key: string]: string } = Object.fromEntries(causeOptions.map(c => [c.value, c.label]));
-export const typeLabels: { [key: string]: string } = Object.fromEntries(typeOptions.map(t => [t.value, t.label]));
-
 export const crossingLabels: { [key: string]: string } = {
     'buena': 'Buena',
     'regular': 'Regular',
@@ -158,6 +135,12 @@ export default function AccidentsPage() {
     
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [accidentIdToDelete, setAccidentIdToDelete] = useState<string | null>(null);
+    
+    const [causeOptions, setCauseOptions] = useState<SettingItem[]>([]);
+    const [typeOptions, setTypeOptions] = useState<SettingItem[]>([]);
+
+    const causeLabels = useMemo(() => Object.fromEntries(causeOptions.map(c => [c.value, c.label])), [causeOptions]);
+    const typeLabels = useMemo(() => Object.fromEntries(typeOptions.map(t => [t.value, t.label])), [typeOptions]);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -184,10 +167,28 @@ export default function AccidentsPage() {
             setIsLoading(false);
         }
     }, [toast]);
+    
+    const fetchSettings = useCallback(async () => {
+        try {
+            const settings = await getSettings();
+            if (settings) {
+                setCauseOptions(settings.accidentCauses || []);
+                setTypeOptions(settings.accidentTypes || []);
+            }
+        } catch (error) {
+            console.error("Error fetching settings:", error);
+            toast({
+                variant: "destructive",
+                title: "Error al Cargar Configuración",
+                description: "No se pudieron cargar las opciones de tipo y causa.",
+            });
+        }
+    }, [toast]);
 
     useEffect(() => {
         fetchAccidents();
-    }, [fetchAccidents]);
+        fetchSettings();
+    }, [fetchAccidents, fetchSettings]);
     
     const filteredAccidents = useMemo(() => {
         return accidents.filter(accident => {
@@ -524,8 +525,8 @@ export default function AccidentsPage() {
                                 <SelectValue placeholder="Filtrar por causa" />
                             </SelectTrigger>
                             <SelectContent>
-                                {Object.entries(causeLabels).map(([value, label]) => (
-                                     <SelectItem key={value} value={value}>{label}</SelectItem>
+                                {causeOptions.map((option) => (
+                                     <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>

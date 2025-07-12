@@ -1,13 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Loader2, FileDown, Calendar as CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
 import { type Accident, getAccidents } from "@/services/accidents";
-import { causeLabels, typeLabels } from "@/app/dashboard/accidents/page";
+import { getSettings, type SettingItem } from '@/services/settings';
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
@@ -27,6 +27,35 @@ export default function ReportsPage() {
     const [selectedTypes, setSelectedTypes] = React.useState<string[]>([]);
     const [selectedCauses, setSelectedCauses] = React.useState<string[]>([]);
     const [reportCriteria, setReportCriteria] = React.useState<any>(null);
+    
+    // Dynamic options from settings
+    const [typeOptions, setTypeOptions] = React.useState<SettingItem[]>([]);
+    const [causeOptions, setCauseOptions] = React.useState<SettingItem[]>([]);
+    const [typeLabels, setTypeLabels] = React.useState<{ [key: string]: string }>({});
+    const [causeLabels, setCauseLabels] = React.useState<{ [key: string]: string }>({});
+    
+    const fetchSettings = useCallback(async () => {
+        try {
+            const settings = await getSettings();
+            if (settings) {
+                setTypeOptions(settings.accidentTypes || []);
+                setCauseOptions(settings.accidentCauses || []);
+                setTypeLabels(Object.fromEntries(settings.accidentTypes.map(t => [t.value, t.label])));
+                setCauseLabels(Object.fromEntries(settings.accidentCauses.map(c => [c.value, c.label])));
+            }
+        } catch (error) {
+            console.error("Error fetching settings:", error);
+            toast({
+                variant: "destructive",
+                title: "Error al Cargar Configuración",
+                description: "No se pudieron cargar las opciones para los filtros.",
+            });
+        }
+    }, [toast]);
+
+    React.useEffect(() => {
+        fetchSettings();
+    }, [fetchSettings]);
 
 
     const handleTypeToggle = (type: string) => {
@@ -109,8 +138,8 @@ export default function ReportsPage() {
         });
     }
 
-    const allTypes = Object.keys(typeLabels);
-    const allCauses = Object.keys(causeLabels);
+    const allTypes = typeOptions.map(t => t.value);
+    const allCauses = causeOptions.map(c => c.value);
     
     return (
         <>
