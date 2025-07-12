@@ -3,11 +3,8 @@
 
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
-
-// leaflet.heat depends on the global L object, so we need to handle it carefully
-// We will import it dynamically inside a useEffect hook.
 
 interface HeatmapLayerProps {
   data: [number, number, number][] | null;
@@ -15,27 +12,31 @@ interface HeatmapLayerProps {
 
 const HeatmapLayer: React.FC<HeatmapLayerProps> = ({ data }) => {
   const map = useMap();
+  const heatLayerRef = useRef<any>(null);
 
   useEffect(() => {
-    // Dynamically import leaflet.heat only on the client side
-    require('leaflet.heat');
+    const initializeHeatmap = async () => {
+      // Dynamically import leaflet.heat only on the client side
+      await import('leaflet.heat');
 
-    // Clear existing heat layers to avoid duplication on re-render
-    map.eachLayer((layer) => {
-      if ((layer as any)._heat) {
-        map.removeLayer(layer);
+      // Clear existing heat layer
+      if (heatLayerRef.current) {
+        map.removeLayer(heatLayerRef.current);
       }
-    });
 
-    if (data && data.length > 0) {
-      // Extend the L (Leaflet) namespace to include the heatLayer type for TypeScript
-      (L as any).heatLayer(data, {
-          radius: 25,
-          blur: 15,
-          maxZoom: 18,
-          gradient: { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
-      }).addTo(map);
-    }
+      if (data && data.length > 0) {
+        // Extend the L (Leaflet) namespace to include the heatLayer type for TypeScript
+        heatLayerRef.current = (L as any).heatLayer(data, {
+            radius: 25,
+            blur: 15,
+            maxZoom: 18,
+            gradient: { 0.4: 'blue', 0.65: 'lime', 1: 'red' }
+        }).addTo(map);
+      }
+    };
+    
+    initializeHeatmap();
+
   }, [data, map]);
 
   return null;
