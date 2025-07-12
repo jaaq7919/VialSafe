@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -29,7 +29,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogClose
 } from "@/components/ui/dialog";
 import {
@@ -47,8 +46,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { MoreHorizontal, PlusCircle, Trash2, FilePenLine } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, FilePenLine, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getUsers, addUser, updateUser, deleteUser, type UserProfile } from "@/services/users";
 
 
 const userSchema = z.object({
@@ -59,60 +59,10 @@ const userSchema = z.object({
   email: z.string().email("Debe ser un correo electrónico válido."),
   phone: z.string().min(7, "El número de celular no es válido."),
   role: z.enum(["Administrador", "Analista de Tráfico", "Operador de Tráfico"], { required_error: "Debe seleccionar un rol." }),
+  password: z.string().optional(),
 });
 
-type User = z.infer<typeof userSchema> & {
-    id: string;
-    avatarUrl: string;
-    initials: string;
-};
-
-const initialUsers: User[] = [
-  {
-    id: "1",
-    firstName: "Carlos",
-    lastName: "Vargas",
-    documentNumber: "11111111",
-    phone: "3101234567",
-    email: "carlos.vargas@centinelavial.com",
-    role: "Administrador",
-    avatarUrl: "https://i.pravatar.cc/150?u=carlos",
-    initials: "CV",
-  },
-  {
-    id: "2",
-    firstName: "Sofía",
-    lastName: "Reyes",
-    documentNumber: "22222222",
-    phone: "3111234567",
-    email: "sofia.reyes@centinelavial.com",
-    role: "Analista de Tráfico",
-    avatarUrl: "https://i.pravatar.cc/150?u=sofia",
-    initials: "SR",
-  },
-  {
-    id: "3",
-    firstName: "Mateo",
-    lastName: "Diaz",
-    documentNumber: "33333333",
-    phone: "3121234567",
-    email: "mateo.diaz@centinelavial.com",
-    role: "Operador de Tráfico",
-    avatarUrl: "https://i.pravatar.cc/150?u=mateo",
-    initials: "MD",
-  },
-  {
-    id: "4",
-    firstName: "Valentina",
-    lastName: "Castillo",
-    documentNumber: "44444444",
-    phone: "3131234567",
-    email: "valentina.castillo@centinelavial.com",
-    role: "Operador de Tráfico",
-    avatarUrl: "https://i.pravatar.cc/150?u=valentina",
-    initials: "VC",
-  },
-];
+type User = UserProfile;
 
 const roleVariant: { [key: string]: "default" | "secondary" | "outline" } = {
   Administrador: "default",
@@ -122,7 +72,9 @@ const roleVariant: { [key: string]: "default" | "secondary" | "outline" } = {
 
 export default function UsersPage() {
   const { toast } = useToast();
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -139,15 +91,37 @@ export default function UsersPage() {
     },
   });
 
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const fetchedUsers = await getUsers();
+      setUsers(fetchedUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast({
+        variant: "destructive",
+        title: "Error al cargar usuarios",
+        description: "No se pudieron obtener los datos de los usuarios.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+
   const handleAddNew = () => {
     setEditingUser(null);
-    form.reset({ firstName: "", lastName: "", documentNumber: "", email: "", phone: "", role: undefined });
+    form.reset({ firstName: "", lastName: "", documentNumber: "", email: "", phone: "", role: undefined, password: "" });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
-    form.reset(user);
+    form.reset({ ...user, password: "" }); // Password is not fetched, so it's empty in edit mode
     setIsDialogOpen(true);
   };
 
@@ -156,46 +130,60 @@ export default function UsersPage() {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (userToDelete) {
-      setUsers(users.filter((user) => user.id !== userToDelete.id));
-      toast({
-        title: "Usuario Eliminado",
-        description: `El usuario ${userToDelete.firstName} ${userToDelete.lastName} ha sido eliminado.`,
-      });
+      try {
+        await deleteUser(userToDelete.uid);
+        toast({
+          title: "Usuario Eliminado",
+          description: `El usuario ${userToDelete.firstName} ${userToDelete.lastName} ha sido eliminado.`,
+        });
+        fetchUsers();
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        toast({
+            variant: "destructive",
+            title: "Error al eliminar",
+            description: "No se pudo eliminar el usuario. Es posible que deba ser re-autenticado para esta operación."
+        });
+      }
     }
     setIsDeleteDialogOpen(false);
     setUserToDelete(null);
   };
   
-  function onSubmit(values: z.infer<typeof userSchema>) {
-    const initials = (values.firstName[0] + (values.lastName[0] || '')).toUpperCase();
-    const avatarUrl = `https://i.pravatar.cc/150?u=${values.email}`;
-    const name = `${values.firstName} ${values.lastName}`;
-    
-    if (editingUser) {
-      // Update user
-      setUsers(users.map(u => u.id === editingUser.id ? { ...u, ...values, avatarUrl, initials } : u));
-      toast({
-        title: "Usuario Actualizado",
-        description: `Los datos de ${name} han sido actualizados.`,
-      });
-    } else {
-      // Add new user
-      const newUser: User = {
-        id: new Date().getTime().toString(),
-        ...values,
-        avatarUrl,
-        initials,
-      };
-      setUsers([newUser, ...users]);
-       toast({
-        title: "Usuario Creado",
-        description: `El usuario ${name} ha sido creado exitosamente.`,
-      });
+  async function onSubmit(values: z.infer<typeof userSchema>) {
+    setIsSubmitting(true);
+    try {
+      if (editingUser) {
+        await updateUser(editingUser.uid, values);
+        toast({
+          title: "Usuario Actualizado",
+          description: `Los datos de ${values.firstName} ${values.lastName} han sido actualizados.`,
+        });
+      } else {
+        const tempPassword = Math.random().toString(36).slice(-8);
+        const userData = { ...values, password: tempPassword };
+        await addUser(userData);
+        toast({
+          title: "Usuario Creado",
+          description: `El usuario ${values.firstName} ha sido creado. Contraseña temporal: ${tempPassword}`,
+          duration: 10000,
+        });
+      }
+      fetchUsers();
+      setIsDialogOpen(false);
+      setEditingUser(null);
+    } catch (error: any) {
+        console.error("Error submitting user:", error);
+        toast({
+            variant: "destructive",
+            title: "Error al guardar",
+            description: error.message || "No se pudo guardar el usuario. Verifique los datos o la consola.",
+        });
+    } finally {
+        setIsSubmitting(false);
     }
-    setIsDialogOpen(false);
-    setEditingUser(null);
   }
 
   return (
@@ -228,44 +216,52 @@ export default function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.email}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={user.avatarUrl} alt={`${user.firstName} ${user.lastName}`} />
-                        <AvatarFallback>{user.initials}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">{user.firstName} {user.lastName}</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={roleVariant[user.role]}>{user.role}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEdit(user)}>
-                          <FilePenLine className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openDeleteDialog(user)} className="text-destructive">
-                           <Trash2 className="mr-2 h-4 w-4" />
-                           Eliminar
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="h-24 text-center">
+                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                users.map((user) => (
+                  <TableRow key={user.uid}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar>
+                          <AvatarImage src={user.avatarUrl} alt={`${user.firstName} ${user.lastName}`} />
+                          <AvatarFallback>{user.initials}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{user.firstName} {user.lastName}</p>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={roleVariant[user.role]}>{user.role}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(user)}>
+                            <FilePenLine className="mr-2 h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openDeleteDialog(user)} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -329,7 +325,7 @@ export default function UsersPage() {
                               <FormItem>
                                   <FormLabel>Correo Electrónico</FormLabel>
                                   <FormControl>
-                                      <Input placeholder="Ej: juan.perez@centinelavial.com" {...field} />
+                                      <Input placeholder="Ej: juan.perez@centinelavial.com" {...field} disabled={!!editingUser} />
                                   </FormControl>
                                   <FormMessage />
                               </FormItem>
@@ -354,7 +350,7 @@ export default function UsersPage() {
                           render={({ field }) => (
                               <FormItem>
                                   <FormLabel>Rol</FormLabel>
-                                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <Select onValueChange={field.onChange} value={field.value}>
                                       <FormControl>
                                           <SelectTrigger>
                                               <SelectValue placeholder="Seleccione un rol" />
@@ -372,9 +368,12 @@ export default function UsersPage() {
                       />
                       <DialogFooter>
                           <DialogClose asChild>
-                              <Button type="button" variant="outline">Cancelar</Button>
+                              <Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button>
                           </DialogClose>
-                          <Button type="submit">{editingUser ? "Guardar Cambios" : "Crear Usuario"}</Button>
+                          <Button type="submit" disabled={isSubmitting}>
+                              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              {editingUser ? "Guardar Cambios" : "Crear Usuario"}
+                          </Button>
                       </DialogFooter>
                   </form>
               </Form>
@@ -387,7 +386,7 @@ export default function UsersPage() {
                   <AlertDialogTitle>¿Está seguro de que desea eliminar este usuario?</AlertDialogTitle>
                   <AlertDialogDescription>
                       Esta acción no se puede deshacer. Esto eliminará permanentemente la cuenta de 
-                      <strong> {userToDelete?.firstName} {userToDelete?.lastName}</strong> y sus datos asociados.
+                      <strong> {userToDelete?.firstName} {userToDelete?.lastName}</strong> de Firebase Authentication y su perfil de Firestore.
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>

@@ -1,7 +1,9 @@
+
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth, type UserProfile } from "@/context/auth-context";
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -19,7 +21,7 @@ import {
   Settings,
 } from "lucide-react";
 
-type Role = "Administrador" | "Analista de Tráfico" | "Operador de Tráfico";
+type Role = UserProfile['role'];
 
 const navItems = [
   {
@@ -80,9 +82,14 @@ const navItems = [
 
 export function SidebarItems() {
   const pathname = usePathname();
-  // SIMULATION: Hardcode the current user's role. 
+  const { userProfile } = useAuth();
+  
   // In a real app, this would come from an authentication context.
-  const currentUserRole: Role = "Administrador"; 
+  const currentUserRole = userProfile?.role; 
+
+  if (!currentUserRole) {
+    return null; // or a loading skeleton
+  }
 
   const accessibleItems = navItems.filter(item => item.roles.includes(currentUserRole));
 

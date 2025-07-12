@@ -2,15 +2,16 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, signInWithEmailAndPassword, signOut, Auth } from 'firebase/auth';
-import { doc, getDoc, Firestore } from 'firebase/firestore';
+import { onAuthStateChanged, User, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 
-interface UserProfile {
+export interface UserProfile {
+    uid: string;
     firstName: string;
     lastName: string;
-    role: string;
+    role: "Administrador" | "Analista de Tráfico" | "Operador de Tráfico";
     avatarUrl: string;
     initials: string;
 }
@@ -38,8 +39,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const userDocRef = doc(db, "users", user.uid);
                 const userDoc = await getDoc(userDocRef);
                 if (userDoc.exists()) {
-                    const profileData = userDoc.data() as UserProfile;
-                    setUserProfile(profileData);
+                    const profileData = userDoc.data();
+                    setUserProfile({
+                        uid: user.uid,
+                        firstName: profileData.firstName,
+                        lastName: profileData.lastName,
+                        role: profileData.role,
+                        avatarUrl: profileData.avatarUrl,
+                        initials: profileData.initials,
+                    } as UserProfile);
                 } else {
                      setUserProfile(null);
                 }
