@@ -113,7 +113,7 @@ export default function AnalysisPage() {
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Análisis de Zonas Críticas</h1>
                 <p className="text-muted-foreground mt-1">
-                    Filtre los datos y utilice la IA para agrupar, contar y detectar zonas de alto riesgo.
+                    Este módulo utiliza inteligencia artificial para analizar el historial de accidentes y descubrir puntos de alta siniestralidad. Filtre los datos, ejecute el análisis y la IA agrupará los incidentes geográficamente, identificando las intersecciones y tramos viales que requieren mayor atención.
                 </p>
             </div>
 
