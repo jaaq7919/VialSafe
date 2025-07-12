@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -5,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Lightbulb, TrafficCone, OctagonAlert, Signal } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { suggestRoadInterventions, type SuggestRoadInterventionsOutput } from '@/ai/flows/suggest-road-interventions';
-import { analyzeCriticalZones } from '@/ai/flows/analyze-critical-zones';
+import type { SuggestRoadInterventionsOutput } from '@/ai/flows/suggest-road-interventions';
 import { getAccidents } from '@/services/accidents';
-import { format } from 'date-fns';
+import { format, min, max } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
+import { dbscan } from '@/lib/dbscan';
+import type { Accident } from '@/services/accidents';
 
 const interventionIcons: { [key: string]: React.ElementType } = {
     'semáforo': Signal,
@@ -50,14 +52,62 @@ export default function InterventionsPage() {
         try {
             const allAccidents = await getAccidents();
             
-            if (allAccidents.length === 0) {
-                setError("No hay accidentes registrados para analizar. Agregue algunos datos primero.");
+            if (allAccidents.length < 2) {
+                setError("No hay suficientes accidentes registrados (<2) para analizar. Agregue algunos datos primero.");
+                setIsLoading(false);
+                return;
+            }
+
+            const points = allAccidents.map(acc => [acc.latitude, acc.longitude]);
+            const clusterAssignments = dbscan(points, 0.0005, 2);
+
+            const clusters: Accident[][] = [];
+            clusterAssignments.forEach((clusterIndex, pointIndex) => {
+                if (clusterIndex !== -1) { 
+                    if (!clusters[clusterIndex]) {
+                        clusters[clusterIndex] = [];
+                    }
+                    clusters[clusterIndex].push(allAccidents[pointIndex]);
+                }
+            });
+
+             if (!clusters || clusters.filter(c => c.length > 0).length === 0) {
+                setError('El algoritmo DBSCAN no encontró agrupaciones geográficas significativas con los datos seleccionados.');
+                setIsLoading(false);
+                return;
+            }
+
+            const accidentClusters = clusters.filter(c => c.length > 0).map((cluster, index) => {
+                const accidentCount = cluster.length;
+                const locations = cluster.map(acc => `${acc.addressPrefix} ${acc.address}`);
+                const locationCounts = locations.reduce((acc, loc) => { acc[loc] = (acc[loc] || 0) + 1; return acc; }, {} as {[key: string]: number});
+                const representativeLocation = Object.keys(locationCounts).reduce((a, b) => locationCounts[a] > locationCounts[b] ? a : b);
+                const causes = cluster.map(acc => acc.cause);
+                const causeCounts = causes.reduce((acc, cause) => { acc[cause] = (acc[cause] || 0) + 1; return acc; }, {} as {[key: string]: number});
+                const causeSummary = Object.entries(causeCounts).map(([cause, count]) => `${count} por ${cause}`).join(', ');
+                const dates = cluster.map(acc => new Date(acc.dateTime));
+                const period = `${format(min(dates), 'yyyy-MM-dd')} a ${format(max(dates), 'yyyy-MM-dd')}`;
+
+                return { clusterId: index, accidentCount, representativeLocation, causeSummary, period };
+            });
+            
+            // Lazy load AI actions
+            const { analyzeCriticalZones } = await import('@/ai/flows/analyze-critical-zones');
+            const { suggestRoadInterventions } = await import('@/ai/flows/suggest-road-interventions');
+
+            const analysisResult = await analyzeCriticalZones({
+                accidentClusters,
+                analysisPeriod: 'Periodo Completo',
+            });
+
+            if (!analysisResult || analysisResult.criticalZones.length === 0) {
+                setError("No se pudieron identificar zonas críticas para analizar. No es posible generar recomendaciones.");
                 setIsLoading(false);
                 return;
             }
 
             const headers = "ubicacion,fecha,hora,tipo,causa,estado_cruce,observaciones,latitud,longitud";
-            const csvData = allAccidents.map(acc => {
+             const csvData = allAccidents.map(acc => {
                 const accDate = new Date(acc.dateTime);
                 return [
                     `"${acc.addressPrefix} ${acc.address}"`,
@@ -72,17 +122,6 @@ export default function InterventionsPage() {
                 ].join(',');
             }).join('\\n');
             const historicalAccidentData = `${headers}\\n${csvData}`;
-
-            const analysisResult = await analyzeCriticalZones({
-                historicalAccidentData,
-                criteria: 'Identificar las 3 zonas con mayor número de accidentes para priorizar las recomendaciones.',
-            });
-
-            if (!analysisResult || analysisResult.criticalZones.length === 0) {
-                setError("No se pudieron identificar zonas críticas para analizar. No es posible generar recomendaciones.");
-                setIsLoading(false);
-                return;
-            }
 
             const interventionsResult = await suggestRoadInterventions({
                 accidentData: historicalAccidentData,
