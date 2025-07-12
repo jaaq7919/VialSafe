@@ -94,38 +94,7 @@ export default function ReportsPage() {
             });
         }
     }, [toast]);
-
-    useEffect(() => {
-        fetchAccidents();
-        fetchSettings();
-    }, [fetchAccidents, fetchSettings]);
     
-    const filteredAccidents = useMemo(() => {
-        setCurrentPage(1); // Reset page to 1 on filter change
-        return accidents.filter(accident => {
-            if (!accident.dateTime) return false;
-            const accidentDate = new Date(accident.dateTime);
-            const from = dateFilter?.from;
-            const to = dateFilter?.to;
-
-            const fullLocation = `${accident.addressPrefix} ${accident.address}`;
-
-            const dateMatch = !from || (accidentDate >= from && (!to || accidentDate <= to));
-            const locationMatch = !locationFilter || fullLocation.toLowerCase().includes(locationFilter.toLowerCase());
-            const causeMatch = !causeFilter || accident.cause === causeFilter;
-
-            return dateMatch && locationMatch && causeMatch;
-        });
-    }, [accidents, locationFilter, causeFilter, dateFilter]);
-
-    const totalPages = Math.ceil(filteredAccidents.length / rowsPerPage);
-    const paginatedAccidents = useMemo(() => {
-        const startIndex = (currentPage - 1) * rowsPerPage;
-        const endIndex = startIndex + rowsPerPage;
-        return filteredAccidents.slice(startIndex, endIndex);
-    }, [filteredAccidents, currentPage, rowsPerPage]);
-
-
     const handleEdit = (accidentId: string) => {
         router.push(`/dashboard/accidents?edit=${accidentId}`);
     };
@@ -157,7 +126,7 @@ export default function ReportsPage() {
         setLocationFilter("");
         setCauseFilter("");
         setDateFilter(undefined);
-    }
+    };
     
     const openDeleteDialog = (id: string) => {
         setAccidentIdToDelete(id);
@@ -184,7 +153,7 @@ export default function ReportsPage() {
 
         let csvContent = "data:text/csv;charset=utf-8,";
         const headers = ["Ubicacion", "Fecha", "Hora", "Tipo", "Causa", "Estado del Cruce", "Observaciones", "Latitud", "Longitud"];
-        csvContent += headers.join(",") + "\n"; 
+        csvContent += headers.join(",") + "\\n"; 
 
         filteredAccidents.forEach(row => {
             const rowArray = [
@@ -198,7 +167,7 @@ export default function ReportsPage() {
                 `"${row.latitude}"`,
                 `"${row.longitude}"`,
             ];
-            csvContent += rowArray.join(",") + "\n";
+            csvContent += rowArray.join(",") + "\\n";
         });
         
         const encodedUri = encodeURI(csvContent);
@@ -213,7 +182,38 @@ export default function ReportsPage() {
             title: "Reporte Descargado",
             description: "El archivo CSV ha sido generado exitosamente.",
         });
-    }
+    };
+
+    useEffect(() => {
+        fetchAccidents();
+        fetchSettings();
+    }, [fetchAccidents, fetchSettings]);
+    
+    const filteredAccidents = useMemo(() => {
+        setCurrentPage(1); // Reset page to 1 on filter change
+        return accidents.filter(accident => {
+            if (!accident.dateTime) return false;
+            const accidentDate = new Date(accident.dateTime);
+            const from = dateFilter?.from;
+            const to = dateFilter?.to;
+
+            const fullLocation = `${accident.addressPrefix} ${accident.address}`;
+
+            const dateMatch = !from || (accidentDate >= from && (!to || accidentDate <= to));
+            const locationMatch = !locationFilter || fullLocation.toLowerCase().includes(locationFilter.toLowerCase());
+            const causeMatch = !causeFilter || accident.cause === causeFilter;
+
+            return dateMatch && locationMatch && causeMatch;
+        });
+    }, [accidents, locationFilter, causeFilter, dateFilter]);
+
+    const totalPages = Math.ceil(filteredAccidents.length / rowsPerPage);
+    const paginatedAccidents = useMemo(() => {
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        return filteredAccidents.slice(startIndex, endIndex);
+    }, [filteredAccidents, currentPage, rowsPerPage]);
+
     
     return (
         <>
