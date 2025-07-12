@@ -20,7 +20,6 @@ import {
   Route,
   Settings,
   Upload,
-  FileText,
 } from "lucide-react";
 
 type Role = UserProfile['role'];
@@ -60,12 +59,6 @@ const navItems = [
     href: "/dashboard/controls",
     label: "Puestos de Control",
     icon: Route,
-    roles: ["Administrador", "Analista de Tráfico"],
-  },
-  {
-    href: "/dashboard/summary",
-    label: "Informe Ejecutivo IA",
-    icon: FileText,
     roles: ["Administrador", "Analista de Tráfico"],
   },
   {
