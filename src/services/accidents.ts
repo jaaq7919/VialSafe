@@ -1,7 +1,8 @@
+
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp, getDoc } from 'firebase/firestore';
 import { z } from 'zod';
 import { formSchema } from '@/app/dashboard/accidents/page';
 
@@ -12,7 +13,7 @@ export type Accident = {
   id: string;
   addressPrefix: string;
   address: string;
-  location: string; 
+  location: string;
   dateTime: Date;
   type: string;
   cause: string;
@@ -41,6 +42,23 @@ export async function getAccidents(): Promise<Accident[]> {
   });
 }
 
+// Obtener un solo accidente por ID
+export async function getAccident(id: string): Promise<Accident | null> {
+    const docRef = doc(db, 'accidents', id);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) {
+        return null;
+    }
+    const data = docSnap.data();
+    return {
+        id: docSnap.id,
+        ...data,
+        dateTime: (data.dateTime as Timestamp).toDate(),
+        createdAt: (data.createdAt as Timestamp).toDate(),
+    } as Accident;
+}
+
+
 // Añadir un nuevo accidente
 export async function addAccident(data: z.infer<typeof formSchema>) {
   try {
@@ -53,7 +71,7 @@ export async function addAccident(data: z.infer<typeof formSchema>) {
       location: `${data.addressPrefix} ${data.address}`,
       dateTime: Timestamp.fromDate(dateTime),
       createdAt: serverTimestamp(),
-      createdBy: "admin_user" // Placeholder until auth is implemented
+      createdBy: "admin_user" // Placeholder
     });
     return { success: true, id: docRef.id };
   } catch (error) {
@@ -69,7 +87,7 @@ export async function updateAccident(id: string, data: z.infer<typeof formSchema
     const [hours, minutes] = data.time.split(':').map(Number);
     const dateTime = new Date(data.date);
     dateTime.setHours(hours, minutes);
-    
+
     await updateDoc(accidentDoc, {
         ...data,
         location: `${data.addressPrefix} ${data.address}`,
@@ -93,3 +111,5 @@ export async function deleteAccident(id: string) {
     throw new Error("Failed to delete accident from the database.");
   }
 }
+
+    

@@ -1,12 +1,14 @@
+
 "use client";
 
-import React, { useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Loader2, FileDown, Calendar as CalendarIcon, Check, ChevronsUpDown } from "lucide-react";
-import { type Accident, getAccidents } from "@/services/accidents";
+import { Loader2, Calendar as CalendarIcon, FileDown, MoreHorizontal, FilePenLine, Trash2, PlusCircle } from "lucide-react";
+import { getAccidents, deleteAccident, type Accident } from "@/services/accidents";
 import { getSettings, type SettingItem } from '@/services/settings';
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -14,110 +16,157 @@ import { es } from 'date-fns/locale';
 import type { DateRange } from "react-day-picker";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
+export const crossingLabels: { [key: string]: string } = {
+    'buena': 'Buena',
+    'regular': 'Regular',
+    'mala': 'Mala',
+    'inexistente': 'Inexistente',
+};
 
 export default function ReportsPage() {
     const { toast } = useToast();
-    const [isLoading, setIsLoading] = React.useState(false);
-    const [reportData, setReportData] = React.useState<Accident[] | null>(null);
+    const router = useRouter();
+    const [isLoading, setIsLoading] = useState(true);
+    const [accidents, setAccidents] = useState<Accident[]>([]);
+
+    const [locationFilter, setLocationFilter] = useState("");
+    const [causeFilter, setCauseFilter] = useState("");
+    const [dateFilter, setDateFilter] = useState<DateRange | undefined>();
     
-    // Filters
-    const [dateFilter, setDateFilter] = React.useState<DateRange | undefined>();
-    const [selectedTypes, setSelectedTypes] = React.useState<string[]>([]);
-    const [selectedCauses, setSelectedCauses] = React.useState<string[]>([]);
-    const [reportCriteria, setReportCriteria] = React.useState<any>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [accidentIdToDelete, setAccidentIdToDelete] = useState<string | null>(null);
     
-    // Dynamic options from settings
-    const [typeOptions, setTypeOptions] = React.useState<SettingItem[]>([]);
-    const [causeOptions, setCauseOptions] = React.useState<SettingItem[]>([]);
-    const [typeLabels, setTypeLabels] = React.useState<{ [key: string]: string }>({});
-    const [causeLabels, setCauseLabels] = React.useState<{ [key: string]: string }>({});
+    const [causeOptions, setCauseOptions] = useState<SettingItem[]>([]);
+    const [typeOptions, setTypeOptions] = useState<SettingItem[]>([]);
+
+    const causeLabels = useMemo(() => Object.fromEntries(causeOptions.map(c => [c.value, c.label])), [causeOptions]);
+    const typeLabels = useMemo(() => Object.fromEntries(typeOptions.map(t => [t.value, t.label])), [typeOptions]);
+
+    const fetchAccidents = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const fetchedAccidents = await getAccidents();
+            setAccidents(fetchedAccidents);
+        } catch (error) {
+            console.error("Error fetching accidents:", error);
+            toast({
+                variant: "destructive",
+                title: "Error al Cargar Datos",
+                description: "No se pudieron obtener los reportes de accidentes desde la base de datos.",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [toast]);
     
     const fetchSettings = useCallback(async () => {
         try {
             const settings = await getSettings();
             if (settings) {
-                setTypeOptions(settings.accidentTypes || []);
                 setCauseOptions(settings.accidentCauses || []);
-                setTypeLabels(Object.fromEntries(settings.accidentTypes.map(t => [t.value, t.label])));
-                setCauseLabels(Object.fromEntries(settings.accidentCauses.map(c => [c.value, c.label])));
+                setTypeOptions(settings.accidentTypes || []);
             }
         } catch (error) {
             console.error("Error fetching settings:", error);
             toast({
                 variant: "destructive",
                 title: "Error al Cargar Configuración",
-                description: "No se pudieron cargar las opciones para los filtros.",
+                description: "No se pudieron cargar las opciones de tipo y causa.",
             });
         }
     }, [toast]);
 
-    React.useEffect(() => {
+    useEffect(() => {
+        fetchAccidents();
         fetchSettings();
-    }, [fetchSettings]);
+    }, [fetchAccidents, fetchSettings]);
+    
+    const filteredAccidents = useMemo(() => {
+        return accidents.filter(accident => {
+            if (!accident.dateTime) return false;
+            const accidentDate = new Date(accident.dateTime);
+            const from = dateFilter?.from;
+            const to = dateFilter?.to;
 
+            const fullLocation = `${accident.addressPrefix} ${accident.address}`;
 
-    const handleTypeToggle = (type: string) => {
-        setSelectedTypes(prev => prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]);
-    }
+            const dateMatch = !from || (accidentDate >= from && (!to || accidentDate <= to));
+            const locationMatch = !locationFilter || fullLocation.toLowerCase().includes(locationFilter.toLowerCase());
+            const causeMatch = !causeFilter || accident.cause === causeFilter;
 
-    const handleCauseToggle = (cause: string) => {
-        setSelectedCauses(prev => prev.includes(cause) ? prev.filter(c => c !== cause) : [...prev, cause]);
-    }
+            return dateMatch && locationMatch && causeMatch;
+        });
+    }, [accidents, locationFilter, causeFilter, dateFilter]);
 
-    const handleGenerateReport = async () => {
-        setIsLoading(true);
-        setReportData(null);
-        
+    const handleEdit = (accidentId: string) => {
+        router.push(`/dashboard/accidents?edit=${accidentId}`);
+    };
+
+    const handleDelete = async (id: string) => {
         try {
-            const allAccidents = await getAccidents();
-            
-            const filteredAccidents = allAccidents.filter(accident => {
-                const accidentDate = new Date(accident.dateTime);
-                const from = dateFilter?.from;
-                const to = dateFilter?.to;
-
-                const dateMatch = !from || (accidentDate >= from && (!to || accidentDate <= to));
-                const typeMatch = selectedTypes.length === 0 || selectedTypes.includes(accident.type);
-                const causeMatch = selectedCauses.length === 0 || selectedCauses.includes(accident.cause);
-
-                return dateMatch && typeMatch && causeMatch;
+            await deleteAccident(id);
+            toast({
+                title: "Reporte Eliminado",
+                description: "El reporte de accidente ha sido eliminado.",
             });
-
-            setReportData(filteredAccidents);
-            setReportCriteria({
-                dates: dateFilter,
-                types: selectedTypes.map(t => typeLabels[t]).join(', ') || 'Todos',
-                causes: selectedCauses.map(c => causeLabels[c]).join(', ') || 'Todas',
-            });
+            fetchAccidents();
         } catch (error) {
-            console.error("Error generating report:", error);
+             console.error("Error deleting accident:", error);
+             toast({
+                variant: "destructive",
+                title: "Error al Eliminar",
+                description: "No se pudo eliminar el reporte.",
+            });
+        }
+    };
+    
+    const handleClearFilters = () => {
+        setLocationFilter("");
+        setCauseFilter("");
+        setDateFilter(undefined);
+    }
+    
+    const openDeleteDialog = (id: string) => {
+        setAccidentIdToDelete(id);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (accidentIdToDelete) {
+            handleDelete(accidentIdToDelete);
+        }
+        setIsDeleteDialogOpen(false);
+        setAccidentIdToDelete(null);
+    };
+    
+    const handleDownloadCsv = () => {
+        if (filteredAccidents.length === 0) {
             toast({
                 variant: "destructive",
-                title: "Error al Generar Reporte",
-                description: "No se pudieron obtener los datos de accidentes.",
+                title: "No hay datos",
+                description: "No hay datos para exportar con los filtros actuales.",
             });
-        } finally {
-            setIsLoading(false);
+            return;
         }
-    }
-
-    const handleDownloadCsv = () => {
-        if (!reportData) return;
 
         let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Ubicacion,Fecha,Hora,Tipo,Causa,Estado del Cruce,Observaciones,Latitud,Longitud\n"; // Header
+        const headers = ["Ubicacion", "Fecha", "Hora", "Tipo", "Causa", "Estado del Cruce", "Observaciones", "Latitud", "Longitud"];
+        csvContent += headers.join(",") + "\n"; 
 
-        reportData.forEach(row => {
+        filteredAccidents.forEach(row => {
             const rowArray = [
                 `"${row.addressPrefix} ${row.address}"`,
                 `"${format(new Date(row.dateTime), 'yyyy-MM-dd')}"`,
                 `"${format(new Date(row.dateTime), 'HH:mm')}"`,
-                `"${typeLabels[row.type]}"`,
-                `"${causeLabels[row.cause]}"`,
-                `"${row.crossingStatus}"`,
-                `"${row.observations || ''}"`,
+                `"${typeLabels[row.type] || row.type}"`,
+                `"${causeLabels[row.cause] || row.cause}"`,
+                `"${crossingLabels[row.crossingStatus] || row.crossingStatus}"`,
+                `"${(row.observations || '').replace(/"/g, '""')}"`,
                 `"${row.latitude}"`,
                 `"${row.longitude}"`,
             ];
@@ -137,169 +186,166 @@ export default function ReportsPage() {
             description: "El archivo CSV ha sido generado exitosamente.",
         });
     }
-
-    const allTypes = typeOptions.map(t => t.value);
-    const allCauses = causeOptions.map(c => c.value);
     
     return (
         <>
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Generador de Reportes</h1>
-                <p className="text-muted-foreground mt-1">
-                    Cree y exporte reportes personalizados basados en los datos de accidentalidad.
-                </p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Historial y Reportes</h1>
+                    <p className="text-muted-foreground mt-1">
+                        Consulte, filtre y exporte los datos de accidentalidad.
+                    </p>
+                </div>
+                <div className="flex gap-2">
+                    <Button onClick={handleDownloadCsv} variant="outline">
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Descargar CSV
+                    </Button>
+                    <Button onClick={() => router.push('/dashboard/accidents')}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Registrar Accidente
+                    </Button>
+                </div>
             </div>
 
-            <Card className="mt-6">
-                <CardHeader>
-                    <CardTitle>Configuración del Reporte</CardTitle>
-                    <CardDescription>
-                        Seleccione los filtros para generar su reporte. Deje un campo en blanco para incluir todos los registros de esa categoría.
-                    </CardDescription>
+            <Card className="mt-8">
+                 <CardHeader>
+                    <CardTitle>Reportes de Accidentes</CardTitle>
+                    <CardDescription>Filtre y consulte los accidentes registrados en el sistema.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Date Filter */}
-                        <div className="flex flex-col space-y-1.5">
-                            <label className="text-sm font-medium">Rango de Fechas</label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant={"outline"}
-                                        className={cn("justify-start text-left font-normal", !dateFilter && "text-muted-foreground")}
-                                    >
-                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                        {dateFilter?.from ? (
-                                            dateFilter.to ? (
-                                                <>
-                                                    {format(dateFilter.from, "LLL dd, y", { locale: es })} -{" "}
-                                                    {format(dateFilter.to, "LLL dd, y", { locale: es })}
-                                                </>
-                                            ) : (
-                                                format(dateFilter.from, "LLL dd, y", { locale: es })
-                                            )
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-center">
+                        <Input
+                            placeholder="Filtrar por ubicación..."
+                            value={locationFilter}
+                            onChange={(e) => setLocationFilter(e.target.value)}
+                            className="md:col-span-1"
+                        />
+                         <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    id="date"
+                                    variant={"outline"}
+                                    className={cn(
+                                        "justify-start text-left font-normal",
+                                        !dateFilter && "text-muted-foreground"
+                                    )}
+                                >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {dateFilter?.from ? (
+                                        dateFilter.to ? (
+                                            <>
+                                                {format(dateFilter.from, "LLL dd, y", { locale: es })} -{" "}
+                                                {format(dateFilter.to, "LLL dd, y", { locale: es })}
+                                            </>
                                         ) : (
-                                            <span>Cualquier fecha</span>
-                                        )}
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar initialFocus mode="range" selected={dateFilter} onSelect={setDateFilter} numberOfMonths={2} locale={es} />
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                        
-                        {/* Type Filter */}
-                         <div className="flex flex-col space-y-1.5">
-                            <label className="text-sm font-medium">Tipo de Accidente</label>
-                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" className="justify-between w-full">
-                                        <span className="truncate">{selectedTypes.length > 0 ? `${selectedTypes.length} seleccionados` : 'Todos los tipos'}</span>
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="w-64">
-                                     {allTypes.map(type => (
-                                         <DropdownMenuItem key={type} onSelect={(e) => e.preventDefault()} onClick={() => handleTypeToggle(type)} >
-                                            <Checkbox checked={selectedTypes.includes(type)} className="mr-2"/>
-                                            {typeLabels[type]}
-                                        </DropdownMenuItem>
-                                     ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                        
-                        {/* Cause Filter */}
-                        <div className="flex flex-col space-y-1.5">
-                           <label className="text-sm font-medium">Causa Probable</label>
-                           <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline" className="justify-between w-full">
-                                        <span className="truncate">{selectedCauses.length > 0 ? `${selectedCauses.length} seleccionadas` : 'Todas las causas'}</span>
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="w-64">
-                                     {allCauses.map(cause => (
-                                         <DropdownMenuItem key={cause} onSelect={(e) => e.preventDefault()} onClick={() => handleCauseToggle(cause)}>
-                                            <Checkbox checked={selectedCauses.includes(cause)} className="mr-2"/>
-                                            {causeLabels[cause]}
-                                        </DropdownMenuItem>
-                                     ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
+                                            format(dateFilter.from, "LLL dd, y", { locale: es })
+                                        )
+                                    ) : (
+                                        <span>Filtrar por fecha</span>
+                                    )}
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                    initialFocus
+                                    mode="range"
+                                    defaultMonth={dateFilter?.from}
+                                    selected={dateFilter}
+                                    onSelect={setDateFilter}
+                                    numberOfMonths={2}
+                                    locale={es}
+                                />
+                            </PopoverContent>
+                        </Popover>
+                         <Select value={causeFilter} onValueChange={setCauseFilter}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Filtrar por causa" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {causeOptions.map((option) => (
+                                     <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Button variant="ghost" onClick={handleClearFilters}>Limpiar Filtros</Button>
                     </div>
-                </CardContent>
-                <CardFooter>
-                     <Button onClick={handleGenerateReport} disabled={isLoading}>
-                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileDown className="mr-2 h-4 w-4" />}
-                        Generar Reporte
-                    </Button>
-                </CardFooter>
-            </Card>
-            
-             {isLoading && (
-                 <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-8 mt-8 border rounded-lg">
-                    <Loader2 className="w-12 h-12 mb-4 animate-spin text-primary" />
-                    <h3 className="text-lg font-semibold text-foreground">Generando reporte...</h3>
-                    <p>Estamos recopilando y filtrando los datos según sus criterios.</p>
-                </div>
-            )}
-            
-            {reportData && (
-                <Card className="mt-8">
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
-                            <CardTitle>Resultados del Reporte</CardTitle>
-                            <CardDescription>
-                                Se encontraron {reportData.length} registros que coinciden con sus criterios.
-                            </CardDescription>
-                        </div>
-                         <Button onClick={handleDownloadCsv} variant="outline" disabled={reportData.length === 0}>
-                            <FileDown className="mr-2 h-4 w-4" />
-                            Descargar CSV
-                        </Button>
-                    </CardHeader>
-                    <CardContent>
-                         <Table>
+
+                    <div className="border rounded-md">
+                        <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Ubicación</TableHead>
                                     <TableHead>Fecha y Hora</TableHead>
                                     <TableHead>Tipo</TableHead>
                                     <TableHead>Causa</TableHead>
+                                    <TableHead>Estado del Cruce</TableHead>
+                                    <TableHead className="text-right">Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {reportData.length > 0 ? (
-                                    reportData.map((accident) => (
+                                {isLoading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="h-24 text-center">
+                                            <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                                        </TableCell>
+                                    </TableRow>
+                                ) : filteredAccidents.length > 0 ? (
+                                    filteredAccidents.map((accident) => (
                                         <TableRow key={accident.id}>
                                             <TableCell className="font-medium">{accident.addressPrefix} {accident.address}</TableCell>
-                                            <TableCell>{format(new Date(accident.dateTime), 'dd/MM/yyyy HH:mm')}</TableCell>
+                                            <TableCell>{accident.dateTime ? format(new Date(accident.dateTime), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
                                             <TableCell>{typeLabels[accident.type] || 'N/A'}</TableCell>
                                             <TableCell>{causeLabels[accident.cause] || 'N/A'}</TableCell>
+                                            <TableCell>{crossingLabels[accident.crossingStatus] || 'N/A'}</TableCell>
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => handleEdit(accident.id!)}>
+                                                            <FilePenLine className="mr-2 h-4 w-4" />
+                                                            Editar
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => openDeleteDialog(accident.id!)} className="text-destructive">
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Eliminar
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
                                      <TableRow>
-                                        <TableCell colSpan={4} className="h-24 text-center">
-                                            No se encontraron accidentes para los criterios seleccionados.
+                                        <TableCell colSpan={6} className="h-24 text-center">
+                                            No se encontraron resultados para los filtros aplicados.
                                         </TableCell>
                                     </TableRow>
                                 )}
                             </TableBody>
                         </Table>
-                    </CardContent>
-                </Card>
-            )}
+                    </div>
+                </CardContent>
+            </Card>
 
-            {!isLoading && !reportData && (
-                <div className="text-center text-muted-foreground p-8 mt-8 border rounded-lg bg-card">
-                    <p>Ajuste los filtros y presione "Generar Reporte" para ver los resultados aquí.</p>
-                </div>
-            )}
+             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. El reporte de accidente será eliminado permanentemente de nuestros servidores.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => setAccidentIdToDelete(null)}>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteConfirm}>Eliminar</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }
+
+    

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,41 +28,18 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, Loader2, MoreHorizontal, Trash2, FilePenLine, MapPin } from "lucide-react";
+import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
-import React, { useMemo, useEffect, useState, useCallback } from "react";
-import type { DateRange } from "react-day-picker";
+import React, { useState, useEffect, useCallback } from "react";
 import { Textarea } from "@/components/ui/textarea";
-import { getAccidents, addAccident, updateAccident, type Accident } from '@/services/accidents';
+import { getAccident, addAccident, updateAccident, type Accident } from '@/services/accidents';
 import { getSettings, type SettingItem } from '@/services/settings';
 import dynamic from 'next/dynamic';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const LocationPicker = dynamic(() => import('@/components/client/location-picker'), {
     ssr: false,
@@ -111,36 +89,18 @@ export const formSchema = z.object({
   longitude: z.number().optional(),
 }).refine(data => data.latitude !== undefined && data.longitude !== undefined, {
     message: "Debe seleccionar una ubicación en el mapa.",
-    path: ["address"], 
+    path: ["address"],
 });
-
-export const crossingLabels: { [key: string]: string } = {
-    'buena': 'Buena',
-    'regular': 'Regular',
-    'mala': 'Mala',
-    'inexistente': 'Inexistente',
-};
-
 
 export default function AccidentsPage() {
     const { toast } = useToast();
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [accidents, setAccidents] = useState<Accident[]>([]);
     const [editingAccidentId, setEditingAccidentId] = useState<string | null>(null);
 
-    const [locationFilter, setLocationFilter] = useState("");
-    const [causeFilter, setCauseFilter] = useState("");
-    const [dateFilter, setDateFilter] = useState<DateRange | undefined>();
-    
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [accidentIdToDelete, setAccidentIdToDelete] = useState<string | null>(null);
-    
     const [causeOptions, setCauseOptions] = useState<SettingItem[]>([]);
     const [typeOptions, setTypeOptions] = useState<SettingItem[]>([]);
-
-    const causeLabels = useMemo(() => Object.fromEntries(causeOptions.map(c => [c.value, c.label])), [causeOptions]);
-    const typeLabels = useMemo(() => Object.fromEntries(typeOptions.map(t => [t.value, t.label])), [typeOptions]);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -151,23 +111,6 @@ export default function AccidentsPage() {
         },
     });
 
-    const fetchAccidents = useCallback(async () => {
-        setIsLoading(true);
-        try {
-            const fetchedAccidents = await getAccidents();
-            setAccidents(fetchedAccidents);
-        } catch (error) {
-            console.error("Error fetching accidents:", error);
-            toast({
-                variant: "destructive",
-                title: "Error al Cargar Datos",
-                description: "No se pudieron obtener los reportes de accidentes desde la base de datos.",
-            });
-        } finally {
-            setIsLoading(false);
-        }
-    }, [toast]);
-    
     const fetchSettings = useCallback(async () => {
         try {
             const settings = await getSettings();
@@ -185,27 +128,43 @@ export default function AccidentsPage() {
         }
     }, [toast]);
 
-    useEffect(() => {
-        fetchAccidents();
-        fetchSettings();
-    }, [fetchAccidents, fetchSettings]);
-    
-    const filteredAccidents = useMemo(() => {
-        return accidents.filter(accident => {
-            if (!accident.dateTime) return false;
+    const fetchAccidentToEdit = useCallback(async (id: string) => {
+        try {
+            const accident = await getAccident(id);
+            if (!accident) {
+                toast({ variant: "destructive", title: "Error", description: "No se encontró el accidente a editar." });
+                router.push('/dashboard/reports');
+                return;
+            }
             const accidentDate = new Date(accident.dateTime);
-            const from = dateFilter?.from;
-            const to = dateFilter?.to;
+            form.reset({
+                addressPrefix: accident.addressPrefix,
+                address: accident.address,
+                date: accidentDate,
+                time: format(accidentDate, 'HH:mm'),
+                type: accident.type,
+                cause: accident.cause,
+                crossingStatus: accident.crossingStatus,
+                observations: accident.observations,
+                latitude: accident.latitude,
+                longitude: accident.longitude,
+            });
+            setEditingAccidentId(id);
+        } catch (error) {
+            console.error("Error fetching accident to edit:", error);
+            toast({ variant: "destructive", title: "Error", description: "No se pudo cargar el accidente." });
+        }
+    }, [form, toast, router]);
 
-            const fullLocation = `${accident.addressPrefix} ${accident.address}`;
 
-            const dateMatch = !from || (accidentDate >= from && (!to || accidentDate <= to));
-            const locationMatch = !locationFilter || fullLocation.toLowerCase().includes(locationFilter.toLowerCase());
-            const causeMatch = !causeFilter || accident.cause === causeFilter;
+    useEffect(() => {
+        fetchSettings();
+        const editId = searchParams.get('edit');
+        if (editId) {
+            fetchAccidentToEdit(editId);
+        }
+    }, [fetchSettings, searchParams, fetchAccidentToEdit]);
 
-            return dateMatch && locationMatch && causeMatch;
-        });
-    }, [accidents, locationFilter, causeFilter, dateFilter]);
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsSubmitting(true);
@@ -215,14 +174,13 @@ export default function AccidentsPage() {
                 setIsSubmitting(false);
                 return;
             }
-            
+
             if (editingAccidentId) {
                 await updateAccident(editingAccidentId, values);
                 toast({
                     title: "Reporte Actualizado",
                     description: "El reporte de accidente se ha actualizado exitosamente.",
                 });
-                setEditingAccidentId(null);
             } else {
                 await addAccident(values);
                 toast({
@@ -230,8 +188,7 @@ export default function AccidentsPage() {
                     description: "El nuevo reporte de accidente se ha guardado.",
                 });
             }
-            form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, type: undefined, cause: undefined, crossingStatus: undefined, observations: "", latitude: undefined, longitude: undefined });
-            fetchAccidents();
+            router.push('/dashboard/reports');
 
         } catch (error) {
             console.error("Error en el registro:", error);
@@ -245,68 +202,12 @@ export default function AccidentsPage() {
         }
     }
 
-    const handleEdit = (accident: Accident) => {
-        if (!accident.id || !accident.dateTime) return;
-        setEditingAccidentId(accident.id);
-
-        const accidentDate = new Date(accident.dateTime);
-        form.reset({
-            addressPrefix: accident.addressPrefix,
-            address: accident.address,
-            date: accidentDate,
-            time: format(accidentDate, 'HH:mm'),
-            type: accident.type,
-            cause: accident.cause,
-            crossingStatus: accident.crossingStatus,
-            observations: accident.observations,
-            latitude: accident.latitude,
-            longitude: accident.longitude,
-        });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    const handleDelete = async (id: string) => {
-        try {
-            await deleteAccident(id);
-            toast({
-                title: "Reporte Eliminado",
-                description: "El reporte de accidente ha sido eliminado.",
-            });
-            fetchAccidents();
-        } catch (error) {
-             console.error("Error deleting accident:", error);
-             toast({
-                variant: "destructive",
-                title: "Error al Eliminar",
-                description: "No se pudo eliminar el reporte.",
-            });
-        }
-    };
-    
-    const handleCancelEdit = () => {
+    const handleCancel = () => {
         setEditingAccidentId(null);
         form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, type: undefined, cause: undefined, crossingStatus: undefined, observations: "", latitude: undefined, longitude: undefined });
+        router.push('/dashboard/reports');
     }
 
-    const handleClearFilters = () => {
-        setLocationFilter("");
-        setCauseFilter("");
-        setDateFilter(undefined);
-    }
-    
-    const openDeleteDialog = (id: string) => {
-        setAccidentIdToDelete(id);
-        setIsDeleteDialogOpen(true);
-    };
-
-    const handleDeleteConfirm = () => {
-        if (accidentIdToDelete) {
-            handleDelete(accidentIdToDelete);
-        }
-        setIsDeleteDialogOpen(false);
-        setAccidentIdToDelete(null);
-    };
-    
     const handleLocationSelect = useCallback((location: { prefix: string, street: string, lat: number, lng: number }) => {
         const matchingPrefix = addressPrefixes.find(p => p.value.toUpperCase() === location.prefix.toUpperCase());
         form.setValue('addressPrefix', matchingPrefix ? matchingPrefix.value : 'CLL', { shouldValidate: true });
@@ -320,7 +221,7 @@ export default function AccidentsPage() {
         <>
             <h1 className="text-3xl font-bold tracking-tight">Gestión de Accidentes</h1>
             <p className="text-muted-foreground mt-1">
-                Registre, consulte y edite los datos de accidentes de tránsito en Florida, Valle.
+                {editingAccidentId ? 'Edite los datos del accidente.' : 'Registre un nuevo accidente de tránsito en Florida, Valle.'}
             </p>
 
             <Card className="mt-6">
@@ -328,7 +229,7 @@ export default function AccidentsPage() {
                     <CardTitle>{editingAccidentId ? 'Editando Reporte de Accidente' : 'Nuevo Reporte de Accidente'}</CardTitle>
                     <CardDescription>Complete los detalles del formulario o haga clic en el mapa para autocompletar la ubicación.</CardDescription>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-6">
                     <div className="space-y-6">
                         <Form {...form}>
                             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -358,7 +259,7 @@ export default function AccidentsPage() {
                                             </FormItem>
                                         )}/>
                                 </div>
-                                    
+
                                     <FormField control={form.control} name="date" render={({ field }) => (
                                         <FormItem className="flex flex-col">
                                             <FormLabel>Fecha</FormLabel>
@@ -388,7 +289,7 @@ export default function AccidentsPage() {
                                             <FormMessage />
                                         </FormItem>
                                     )}/>
-                                    
+
                                     <FormField control={form.control} name="type" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Tipo de Accidente</FormLabel>
@@ -456,9 +357,7 @@ export default function AccidentsPage() {
                                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                         {editingAccidentId ? 'Actualizar Reporte' : 'Enviar Reporte'}
                                     </Button>
-                                    {editingAccidentId && (
-                                        <Button variant="outline" onClick={handleCancelEdit}>Cancelar</Button>
-                                    )}
+                                    <Button variant="outline" type="button" onClick={handleCancel}>Cancelar</Button>
                                 </div>
                             </form>
                         </Form>
@@ -469,141 +368,8 @@ export default function AccidentsPage() {
                     </div>
                 </CardContent>
             </Card>
-
-            <Card className="mt-8">
-                 <CardHeader>
-                    <CardTitle>Historial y Reportes de Accidentes</CardTitle>
-                    <CardDescription>Filtre y consulte los accidentes registrados en el sistema.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-center">
-                        <Input
-                            placeholder="Filtrar por ubicación..."
-                            value={locationFilter}
-                            onChange={(e) => setLocationFilter(e.target.value)}
-                            className="md:col-span-1"
-                        />
-                         <Popover>
-                            <PopoverTrigger asChild>
-                                <Button
-                                    id="date"
-                                    variant={"outline"}
-                                    className={cn(
-                                        "justify-start text-left font-normal",
-                                        !dateFilter && "text-muted-foreground"
-                                    )}
-                                >
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {dateFilter?.from ? (
-                                        dateFilter.to ? (
-                                            <>
-                                                {format(dateFilter.from, "LLL dd, y", { locale: es })} -{" "}
-                                                {format(dateFilter.to, "LLL dd, y", { locale: es })}
-                                            </>
-                                        ) : (
-                                            format(dateFilter.from, "LLL dd, y", { locale: es })
-                                        )
-                                    ) : (
-                                        <span>Filtrar por fecha</span>
-                                    )}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar
-                                    initialFocus
-                                    mode="range"
-                                    defaultMonth={dateFilter?.from}
-                                    selected={dateFilter}
-                                    onSelect={setDateFilter}
-                                    numberOfMonths={2}
-                                    locale={es}
-                                />
-                            </PopoverContent>
-                        </Popover>
-                         <Select value={causeFilter} onValueChange={setCauseFilter}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Filtrar por causa" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {causeOptions.map((option) => (
-                                     <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Button variant="ghost" onClick={handleClearFilters}>Limpiar Filtros</Button>
-                    </div>
-
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Ubicación</TableHead>
-                                <TableHead>Fecha y Hora</TableHead>
-                                <TableHead>Tipo</TableHead>
-                                <TableHead>Causa</TableHead>
-                                <TableHead>Estado del Cruce</TableHead>
-                                <TableHead className="text-right">Acciones</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
-                                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-                                    </TableCell>
-                                </TableRow>
-                            ) : filteredAccidents.length > 0 ? (
-                                filteredAccidents.map((accident) => (
-                                    <TableRow key={accident.id}>
-                                        <TableCell className="font-medium">{accident.addressPrefix} {accident.address}</TableCell>
-                                        <TableCell>{accident.dateTime ? format(new Date(accident.dateTime), 'dd/MM/yyyy HH:mm') : 'N/A'}</TableCell>
-                                        <TableCell>{typeLabels[accident.type] || 'N/A'}</TableCell>
-                                        <TableCell>{causeLabels[accident.cause] || 'N/A'}</TableCell>
-                                        <TableCell>{crossingLabels[accident.crossingStatus] || 'N/A'}</TableCell>
-                                        <TableCell className="text-right">
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleEdit(accident)}>
-                                                        <FilePenLine className="mr-2 h-4 w-4" />
-                                                        Editar
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => openDeleteDialog(accident.id!)} className="text-destructive">
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Eliminar
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
-                                        No se encontraron resultados para los filtros aplicados.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
-
-             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Esta acción no se puede deshacer. El reporte de accidente será eliminado permanentemente de nuestros servidores.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel onClick={() => setAccidentIdToDelete(null)}>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteConfirm}>Eliminar</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </>
     );
 }
+
+    
