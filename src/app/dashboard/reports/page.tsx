@@ -184,7 +184,7 @@ export default function ReportsPage() {
 
         let csvContent = "data:text/csv;charset=utf-8,";
         const headers = ["Ubicacion", "Fecha", "Hora", "Tipo", "Causa", "Estado del Cruce", "Observaciones", "Latitud", "Longitud"];
-        csvContent += headers.join(",") + "\n"; 
+        csvContent += headers.join(",") + "\\n"; 
 
         filteredAccidents.forEach(row => {
             const rowArray = [
@@ -198,7 +198,7 @@ export default function ReportsPage() {
                 `"${row.latitude}"`,
                 `"${row.longitude}"`,
             ];
-            csvContent += rowArray.join(",") + "\n";
+            csvContent += rowArray.join(",") + "\\n";
         });
         
         const encodedUri = encodeURI(csvContent);
@@ -439,7 +439,7 @@ export default function ReportsPage() {
                                     </div>
                                     <div>
                                         <h4 className="font-semibold text-sm">Fecha y Hora</h4>
-                                        <p className="text-muted-foreground">{format(new Date(selectedAccident.dateTime), 'dd \'de\' LLLL \'de\' yyyy, HH:mm', { locale: es })}</p>
+                                        <p className="text-muted-foreground">{format(new Date(selectedAccident.dateTime), 'dd \\'de\\' LLLL \\'de\\' yyyy, HH:mm', { locale: es })}</p>
                                     </div>
                                     <div>
                                         <h4 className="font-semibold text-sm">Tipo de Accidente</h4>

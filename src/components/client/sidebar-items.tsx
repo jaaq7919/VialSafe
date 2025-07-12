@@ -20,6 +20,7 @@ import {
   Route,
   Settings,
   Upload,
+  FileText,
 } from "lucide-react";
 
 type Role = UserProfile['role'];
@@ -35,6 +36,12 @@ const navItems = [
     href: "/dashboard/accidents",
     label: "Registro de Accidentes",
     icon: Siren,
+    roles: ["Administrador", "Analista de Tráfico", "Operador de Tráfico"],
+  },
+  {
+    href: "/dashboard/reports",
+    label: "Historial y Reportes",
+    icon: FileDown,
     roles: ["Administrador", "Analista de Tráfico", "Operador de Tráfico"],
   },
   {
@@ -56,18 +63,18 @@ const navItems = [
     roles: ["Administrador", "Analista de Tráfico"],
   },
   {
+    href: "/dashboard/summary",
+    label: "Informe Ejecutivo IA",
+    icon: FileText,
+    roles: ["Administrador", "Analista de Tráfico"],
+  },
+  {
     href: "/dashboard/tracking",
     label: "Seguimiento",
     icon: ClipboardCheck,
     roles: ["Administrador", "Analista de Tráfico"],
   },
   {
-    href: "/dashboard/reports",
-    label: "Generar Reportes",
-    icon: FileDown,
-    roles: ["Administrador", "Analista de Tráfico", "Operador de Tráfico"],
-  },
-    {
     href: "/dashboard/import",
     label: "Importación Masiva",
     icon: Upload,
