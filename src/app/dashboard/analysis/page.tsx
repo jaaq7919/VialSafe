@@ -237,10 +237,10 @@ export default function AnalysisPage() {
                 {!isLoading && !analysisError && wasAnalyzed && (
                     <>
                         {analysisResult && analysisResult.criticalZones.length > 0 ? (
-                            <div>
-                                <h2 className="text-2xl font-bold tracking-tight mb-4">Resultados del Análisis: {analysisResult.criticalZones.length} Zonas Críticas Identificadas</h2>
+                            <div className="space-y-6">
+                                <h2 className="text-2xl font-bold tracking-tight">Resultados del Análisis: {analysisResult.criticalZones.length} Zonas Críticas Identificadas</h2>
                                 
-                                <Card className="mb-6">
+                                <Card>
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
                                             <FileText className="w-5 h-5" />
@@ -252,16 +252,19 @@ export default function AnalysisPage() {
                                     </CardContent>
                                 </Card>
 
-                                <Card className="mb-6">
+                                <Card>
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
                                             <Map className="w-5 h-5" />
-                                            Mapa de Calor de Zonas Críticas
+                                            Mapa de Zonas Críticas
                                         </CardTitle>
+                                         <CardDescription>
+                                            Círculos de colores indican la severidad de cada zona: Rojo (muy alta), Naranja (alta), Amarillo (media).
+                                        </CardDescription>
                                     </CardHeader>
                                     <CardContent>
-                                        <div className="h-[400px] w-full rounded-md overflow-hidden">
-                                           <AnalysisMap points={analysisResult.allPoints} />
+                                        <div className="h-[450px] w-full rounded-md overflow-hidden">
+                                           <AnalysisMap zones={analysisResult.criticalZones} />
                                         </div>
                                     </CardContent>
                                 </Card>

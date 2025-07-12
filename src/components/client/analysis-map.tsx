@@ -4,25 +4,35 @@
 import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet.heat'; // Import heatmap plugin
 import { cn } from "@/lib/utils";
+import type { CriticalZone } from '@/app/dashboard/analysis/actions';
 
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 
 interface AnalysisMapProps {
-  points: [number, number, number][]; // lat, lng, intensity
+  zones: CriticalZone[];
 }
 
 const defaultCenter: L.LatLngExpression = [3.423, -76.324];
 
-export default function AnalysisMap({ points }: AnalysisMapProps) {
+const getColor = (accidentCount: number) => {
+    if (accidentCount >= 5) return '#ef4444'; // red-500
+    if (accidentCount >= 3) return '#f97316'; // orange-500
+    return '#eab308'; // yellow-500
+};
+
+const getRadius = (accidentCount: number) => {
+    return 30 + Math.log(accidentCount) * 15;
+};
+
+export default function AnalysisMap({ zones }: AnalysisMapProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<L.Map | null>(null);
-    const heatLayerRef = useRef<L.HeatLayer | null>(null);
+    const layersRef = useRef<L.LayerGroup | null>(null);
 
-    // Set up default icon
+    // Set up default icon for markers (though we use circles)
     useEffect(() => {
         const iconDefault = L.icon({
             iconRetinaUrl: iconRetinaUrl.src,
@@ -50,6 +60,8 @@ export default function AnalysisMap({ points }: AnalysisMapProps) {
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
+
+            layersRef.current = L.layerGroup().addTo(map);
         }
 
         return () => {
@@ -60,32 +72,50 @@ export default function AnalysisMap({ points }: AnalysisMapProps) {
         };
     }, []);
 
-    // Update heatmap when points change
+    // Update circles when zones change
     useEffect(() => {
-        if (mapRef.current) {
-            // Remove old layer
-            if (heatLayerRef.current) {
-                mapRef.current.removeLayer(heatLayerRef.current);
-                heatLayerRef.current = null;
-            }
+        const map = mapRef.current;
+        const layers = layersRef.current;
+        if (!map || !layers) return;
 
-            if (points && points.length > 0) {
-                const heatLayer = (L as any).heatLayer(points, {
-                    radius: 25,
-                    blur: 15,
-                    maxZoom: 18,
-                }).addTo(mapRef.current);
+        // Clear previous layers
+        layers.clearLayers();
+        const allPoints: L.LatLng[] = [];
 
-                heatLayerRef.current = heatLayer;
+        if (zones && zones.length > 0) {
+            zones.forEach(zone => {
+                const color = getColor(zone.accidentCount);
+                const radius = getRadius(zone.accidentCount);
 
-                // Fit map to bounds of the points
-                const bounds = L.latLngBounds(points.map(p => [p[0], p[1]]));
-                if (bounds.isValid()) {
-                    mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+                const circle = L.circle(zone.center as L.LatLngExpression, {
+                    color: color,
+                    fillColor: color,
+                    fillOpacity: 0.3,
+                    radius: radius,
+                }).addTo(layers);
+
+                circle.bindPopup(`
+                    <b>${zone.location}</b><br>
+                    ${zone.accidentCount} accidentes<br>
+                    Razón: ${zone.reason}
+                `);
+                
+                zone.points.forEach(p => allPoints.push(L.latLng(p[0], p[1])));
+            });
+
+            if(allPoints.length > 0) {
+                const bounds = L.latLngBounds(allPoints);
+                 if (bounds.isValid()) {
+                    map.fitBounds(bounds, { padding: [50, 50] });
                 }
+            } else {
+                 map.setView(defaultCenter, 15);
             }
+        } else {
+             map.setView(defaultCenter, 15);
         }
-    }, [points]);
+
+    }, [zones]);
 
     return (
         <div 
