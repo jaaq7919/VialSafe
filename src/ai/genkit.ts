@@ -1,22 +1,18 @@
 // src/ai/genkit.ts
 'use server';
-
-import {genkit, configureGenkit} from '@genkit-ai/core';
-import {googleAI} from '@genkit-ai/googleai';
-import {z} from 'zod';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 if (!process.env.GOOGLE_GENAI_API_KEY) {
   throw new Error('GOOGLE_GENAI_API_KEY no está configurada');
 }
 
-configureGenkit({
-  plugins: [
-    googleAI({
-      apiKey: process.env.GOOGLE_GENAI_API_KEY,
-    }),
-  ],
-  logLevel: 'debug',
-  enableTracingAndMetrics: true,
-});
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY);
 
-export {genkit as ai, z};
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash"});
+
+export async function run(prompt: string) {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    return text;
+}
