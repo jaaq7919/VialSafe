@@ -66,6 +66,8 @@ export async function getUsers(): Promise<UserProfile[]> {
 }
 
 // Add a new user profile to Firestore
+// NOTE: This only creates the user profile. The admin must create the
+// user in Firebase Authentication manually.
 export async function addUser(data: z.infer<typeof addUserSchema>): Promise<{ success: boolean; uid: string }> {
     try {
         const q = query(collection(db, "users"), where("email", "==", data.email));
@@ -78,12 +80,17 @@ export async function addUser(data: z.infer<typeof addUserSchema>): Promise<{ su
         const initials = (data.firstName[0] + (data.lastName[0] || '')).toUpperCase();
         const avatarUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${data.firstName} ${data.lastName}`;
 
-        const docRef = await addDoc(collection(db, "users"), {
+        // Create the user profile document in Firestore with an auto-generated ID
+        const docRef = await addDoc(usersCollection, {
             ...data,
             avatarUrl,
             initials,
             createdAt: serverTimestamp(),
         });
+
+        // Store the auto-generated ID as the 'uid' field within the document itself
+        // This decouples the Firestore document ID from the Firebase Auth UID.
+        await updateDoc(docRef, { uid: docRef.id });
 
         return { success: true, uid: docRef.id };
     } catch (error: any) {
@@ -97,8 +104,21 @@ export async function addUser(data: z.infer<typeof addUserSchema>): Promise<{ su
 export async function updateUser(uid: string, data: z.infer<typeof updateUserSchema>) {
   const userDoc = doc(db, 'users', uid);
   try {
-    const updateData: Partial<z.infer<typeof updateUserSchema>> = { ...data };
+    const updateData: Partial<z.infer<typeof updateUserSchema>> & { avatarUrl?: string, initials?: string } = { ...data };
     delete updateData.id; // Remove id from data object before updating
+    
+    // Recalculate avatar and initials if names change
+    if(data.firstName || data.lastName) {
+        const docSnap = await getDoc(userDoc);
+        if (docSnap.exists()) {
+            const existingData = docSnap.data();
+            const firstName = data.firstName || existingData.firstName;
+            const lastName = data.lastName || existingData.lastName;
+            updateData.initials = (firstName[0] + (lastName[0] || '')).toUpperCase();
+            updateData.avatarUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${firstName} ${lastName}`;
+        }
+    }
+
     await updateDoc(userDoc, updateData);
     return { success: true };
   } catch (error) {
@@ -111,6 +131,9 @@ export async function updateUser(uid: string, data: z.infer<typeof updateUserSch
 export async function deleteUser(uid: string) {
   const userDoc = doc(db, 'users', uid);
   try {
+    // Note: This only deletes the Firestore profile.
+    // The auth user must be deleted manually from the Firebase Console.
+    // This is a security measure.
     await deleteDoc(userDoc);
     console.warn(`User profile ${uid} deleted from Firestore. Remember to delete from Firebase Auth manually.`);
     return { success: true };

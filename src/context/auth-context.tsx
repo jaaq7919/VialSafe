@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User, signInWithEmailAndPassword, signOut } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, DocumentData } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 
@@ -32,12 +32,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState(true);
 
     const fetchUserProfile = async (user: User) => {
-        const userDocRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userDocRef);
-        if (userDoc.exists()) {
-            const profileData = userDoc.data();
+        // Query the 'users' collection for a document where the 'email' field matches the user's email.
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("email", "==", user.email));
+        
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+            // Assuming email is unique, we take the first result.
+            const userDoc = querySnapshot.docs[0];
+            const profileData = userDoc.data() as DocumentData;
             setUserProfile({
-                uid: user.uid,
+                uid: userDoc.id, // Use the document ID from firestore
                 firstName: profileData.firstName,
                 lastName: profileData.lastName,
                 role: profileData.role,
@@ -45,8 +51,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 initials: profileData.initials,
             } as UserProfile);
         } else {
-            console.warn(`No user profile found in Firestore for UID: ${user.uid}`);
-            setUserProfile(null);
+            console.warn(`No user profile found in Firestore for UID: ${user.uid} with email ${user.email}`);
+            setUserProfile(null); // Explicitly set to null if not found
         }
     };
     

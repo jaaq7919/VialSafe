@@ -120,7 +120,7 @@ export default function UsersPage() {
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
-    form.reset({ ...user });
+    form.reset({ ...user, id: user.uid });
     setIsDialogOpen(true);
   };
 
@@ -135,7 +135,7 @@ export default function UsersPage() {
         await deleteUser(userToDelete.uid);
         toast({
           title: "Usuario Eliminado",
-          description: `El usuario ${userToDelete.firstName} ${userToDelete.lastName} ha sido eliminado.`,
+          description: `El perfil de ${userToDelete.firstName} ${userToDelete.lastName} ha sido eliminado.`,
         });
         fetchUsers();
       } catch (error) {
@@ -143,7 +143,7 @@ export default function UsersPage() {
         toast({
             variant: "destructive",
             title: "Error al eliminar",
-            description: "No se pudo eliminar el usuario. Es posible que deba ser re-autenticado para esta operación."
+            description: "No se pudo eliminar el perfil del usuario."
         });
       }
     }
@@ -188,19 +188,19 @@ export default function UsersPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Gestión de Usuarios</h1>
           <p className="text-muted-foreground mt-1">
-            Administre las cuentas de usuario y los permisos.
+            Administre los perfiles de usuario. Las cuentas de autenticación se gestionan en la consola de Firebase.
           </p>
         </div>
         <Button onClick={handleAddNew}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Agregar Usuario
+            Agregar Perfil
         </Button>
       </div>
 
       <Card className="mt-6">
         <CardHeader>
             <CardTitle>Todos los Usuarios</CardTitle>
-            <CardDescription>Una lista de todos los usuarios en el sistema Centinela Vial.</CardDescription>
+            <CardDescription>Una lista de todos los perfiles de usuario en el sistema Centinela Vial.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -266,9 +266,9 @@ export default function UsersPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                  <DialogTitle>{editingUser ? "Editar Usuario" : "Agregar Nuevo Usuario"}</DialogTitle>
+                  <DialogTitle>{editingUser ? "Editar Perfil" : "Agregar Nuevo Perfil"}</DialogTitle>
                   <DialogDescription>
-                      {editingUser ? "Modifique los detalles del usuario a continuación." : "Complete el formulario para agregar un nuevo usuario al sistema."}
+                      {editingUser ? "Modifique los detalles del perfil a continuación." : "Complete el formulario para agregar un nuevo perfil de usuario al sistema."}
                   </DialogDescription>
               </DialogHeader>
               <Form {...form}>
@@ -368,7 +368,7 @@ export default function UsersPage() {
                           </DialogClose>
                           <Button type="submit" disabled={isSubmitting}>
                               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                              {editingUser ? "Guardar Cambios" : "Crear Usuario"}
+                              {editingUser ? "Guardar Cambios" : "Crear Perfil"}
                           </Button>
                       </DialogFooter>
                   </form>
@@ -379,10 +379,10 @@ export default function UsersPage() {
        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
               <AlertDialogHeader>
-                  <AlertDialogTitle>¿Está seguro de que desea eliminar este usuario?</AlertDialogTitle>
+                  <AlertDialogTitle>¿Está seguro de que desea eliminar este perfil?</AlertDialogTitle>
                   <AlertDialogDescription>
                       Esta acción no se puede deshacer. Esto eliminará permanentemente el perfil de 
-                      <strong> {userToDelete?.firstName} {userToDelete?.lastName}</strong> de Firestore. Recuerde eliminar la cuenta de Firebase Authentication manualmente.
+                      <strong> {userToDelete?.firstName} {userToDelete?.lastName}</strong> de Firestore. Recuerde eliminar la cuenta de Firebase Authentication manualmente si existe.
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
