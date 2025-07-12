@@ -8,13 +8,19 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, FilterX, Lightbulb, Loader2, OctagonAlert, FileText } from "lucide-react";
+import { Calendar as CalendarIcon, FilterX, Lightbulb, Loader2, OctagonAlert, FileText, Map } from "lucide-react";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { getSettings, type SettingItem } from '@/services/settings';
 import { useToast } from "@/hooks/use-toast";
 import { runDbscanAnalysis, type AnalysisResult } from "./actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import dynamic from 'next/dynamic';
+
+const AnalysisMap = dynamic(() => import('@/components/client/analysis-map'), {
+    ssr: false,
+    loading: () => <div className="h-[400px] w-full rounded-md bg-muted flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+});
 
 export default function AnalysisPage() {
     const { toast } = useToast();
@@ -233,6 +239,21 @@ export default function AnalysisPage() {
                         {analysisResult && analysisResult.criticalZones.length > 0 ? (
                             <div>
                                 <h2 className="text-2xl font-bold tracking-tight mb-4">Resultados del Análisis: {analysisResult.criticalZones.length} Zonas Críticas Identificadas</h2>
+                                
+                                <Card className="mb-6">
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <Map className="w-5 h-5" />
+                                            Mapa de Calor de Zonas Críticas
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="h-[400px] w-full rounded-md overflow-hidden">
+                                           <AnalysisMap points={analysisResult.allPoints} />
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                                
                                  <Card className="mb-6">
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
@@ -260,6 +281,7 @@ export default function AnalysisPage() {
                                         <CardContent className="flex-grow space-y-2">
                                            <p className="text-sm font-bold">{zone.accidentCount} accidentes registrados</p>
                                            <p className="text-xs text-muted-foreground"><strong>Periodo:</strong> {zone.period}</p>
+                                            <p className="text-xs text-muted-foreground"><strong>Fechas:</strong> {zone.accidentDatesSummary}</p>
                                            <p className="text-xs text-muted-foreground"><strong>Causas:</strong> {zone.causeSummary}</p>
                                         </CardContent>
                                     </Card>

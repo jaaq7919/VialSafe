@@ -19,11 +19,14 @@ export interface CriticalZone {
     reason: string;
     period: string;
     causeSummary: string;
+    accidentDatesSummary: string;
+    points: [number, number, number][]; // [lat, lng, intensity]
 }
 
 export interface AnalysisResult {
     criticalZones: CriticalZone[];
     summary: string;
+    allPoints: [number, number, number][];
 }
 
 
@@ -76,9 +79,11 @@ export async function runDbscanAnalysis(filters: AnalysisFilters): Promise<{ ana
         const significantClusters = clusters.filter(c => c && c.length > 0);
 
         if (significantClusters.length === 0) {
-            return { analysis: { criticalZones: [], summary: "Análisis completado. No se encontraron agrupaciones de accidentes (zonas críticas) con los criterios actuales." } };
+            return { analysis: { criticalZones: [], summary: "Análisis completado. No se encontraron agrupaciones de accidentes (zonas críticas) con los criterios actuales.", allPoints: [] } };
         }
         
+        const allPointsForHeatmap: [number, number, number][] = [];
+
         const criticalZones: CriticalZone[] = significantClusters.map((cluster) => {
             const accidentCount = cluster.length;
             
@@ -98,6 +103,11 @@ export async function runDbscanAnalysis(filters: AnalysisFilters): Promise<{ ana
             const period = `${format(minDate, 'yyyy-MM-dd')} a ${format(maxDate, 'yyyy-MM-dd')}`;
             const daysDiff = differenceInDays(maxDate, minDate);
 
+            const accidentDates = dates.map(d => format(d, 'yyyy-MM-dd')).join(', ');
+
+            const clusterPoints: [number, number, number][] = cluster.map(acc => [acc.latitude, acc.longitude, 1]); // Intensity of 1 per accident
+            allPointsForHeatmap.push(...clusterPoints);
+
             // *** Lógica para generar la razón basada en reglas ***
             let reason = `Alta concentración de ${accidentCount} accidentes.`;
             if (topCause !== 'desconocida') {
@@ -115,12 +125,14 @@ export async function runDbscanAnalysis(filters: AnalysisFilters): Promise<{ ana
                 reason,
                 period,
                 causeSummary,
+                accidentDatesSummary: accidentDates,
+                points: clusterPoints,
             };
         });
         
         const summary = `Se identificaron ${criticalZones.length} zonas críticas. La zona con más incidentes es "${criticalZones.reduce((a,b) => a.accidentCount > b.accidentCount ? a : b).location}" con ${criticalZones.reduce((a,b) => a.accidentCount > b.accidentCount ? a : b).accidentCount} accidentes.`;
 
-        return { analysis: { criticalZones, summary } };
+        return { analysis: { criticalZones, summary, allPoints: allPointsForHeatmap } };
 
     } catch (error) {
         console.error("Error in runDbscanAnalysis: ", error);
