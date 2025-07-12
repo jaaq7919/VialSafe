@@ -11,6 +11,8 @@ import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 
 interface LocationPickerProps {
   onLocationSelect: (location: { prefix: string, street: string, lat: number, lng: number }) => void;
+  initialCenter?: [number, number];
+  readOnly?: boolean;
 }
 
 const defaultCenter: L.LatLngExpression = [3.423, -76.324];
@@ -79,7 +81,7 @@ const extractAddress = (osmData: any): { prefix: string, street: string } | null
 };
 
 
-export default function LocationPicker({ onLocationSelect }: LocationPickerProps) {
+export default function LocationPicker({ onLocationSelect, initialCenter, readOnly = false }: LocationPickerProps) {
     const mapContainerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<L.Map | null>(null);
     const markerRef = useRef<L.Marker | null>(null);
@@ -99,36 +101,48 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
 
     useEffect(() => {
         if (mapContainerRef.current && !mapRef.current) { 
-            const map = L.map(mapContainerRef.current).setView(defaultCenter, 15);
+            const center = initialCenter ? (initialCenter as L.LatLngExpression) : defaultCenter;
+            const map = L.map(mapContainerRef.current, {
+                scrollWheelZoom: !readOnly,
+                dragging: !readOnly,
+                zoomControl: !readOnly,
+            }).setView(center, 15);
+
             mapRef.current = map;
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
+            
+            if (initialCenter) {
+                markerRef.current = L.marker(initialCenter as L.LatLngExpression).addTo(map);
+            }
 
-            map.on('click', async (e: L.LeafletMouseEvent) => {
-                const { lat, lng } = e.latlng;
+            if (!readOnly) {
+                map.on('click', async (e: L.LeafletMouseEvent) => {
+                    const { lat, lng } = e.latlng;
 
-                if (markerRef.current) {
-                    markerRef.current.setLatLng(e.latlng);
-                } else {
-                    markerRef.current = L.marker(e.latlng).addTo(map);
-                }
-
-                try {
-                    const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
-                    const data = await response.json();
-                    
-                    if (data) {
-                        const address = extractAddress(data);
-                        if(address) {
-                            onLocationSelect({ ...address, lat, lng });
-                        }
+                    if (markerRef.current) {
+                        markerRef.current.setLatLng(e.latlng);
+                    } else {
+                        markerRef.current = L.marker(e.latlng).addTo(map);
                     }
-                } catch (error) {
-                    console.error("Error fetching address from Nominatim:", error);
-                }
-            });
+
+                    try {
+                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`);
+                        const data = await response.json();
+                        
+                        if (data) {
+                            const address = extractAddress(data);
+                            if(address) {
+                                onLocationSelect({ ...address, lat, lng });
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error fetching address from Nominatim:", error);
+                    }
+                });
+            }
         }
 
         return () => {
@@ -137,12 +151,13 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
                 mapRef.current = null;
             }
         };
-    }, [onLocationSelect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [onLocationSelect, initialCenter, readOnly]);
 
     return (
         <div 
             ref={mapContainerRef} 
-            className="h-[400px] w-full rounded-md overflow-hidden bg-muted"
+            className={cn("h-full w-full rounded-md overflow-hidden bg-muted", readOnly && "cursor-not-allowed")}
         >
         </div>
     );

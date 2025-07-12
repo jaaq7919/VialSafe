@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Loader2, Calendar as CalendarIcon, FileDown, MoreHorizontal, FilePenLine, Trash2, PlusCircle } from "lucide-react";
-import { getAccidents, deleteAccident, type Accident } from "@/services/accidents";
+import { Loader2, Calendar as CalendarIcon, FileDown, MoreHorizontal, FilePenLine, Trash2, PlusCircle, Eye } from "lucide-react";
+import { getAccidents, type Accident } from "@/services/accidents";
 import { getSettings, type SettingItem } from '@/services/settings';
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -20,6 +20,13 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import dynamic from "next/dynamic";
+
+const LocationPicker = dynamic(() => import('@/components/client/location-picker'), {
+    ssr: false,
+    loading: () => <div className="h-[200px] w-full rounded-md bg-muted flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+});
 
 export const crossingLabels: { [key: string]: string } = {
     'buena': 'Buena',
@@ -40,6 +47,9 @@ export default function ReportsPage() {
     
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [accidentIdToDelete, setAccidentIdToDelete] = useState<string | null>(null);
+    
+    const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+    const [selectedAccident, setSelectedAccident] = useState<Accident | null>(null);
     
     const [causeOptions, setCauseOptions] = useState<SettingItem[]>([]);
     const [typeOptions, setTypeOptions] = useState<SettingItem[]>([]);
@@ -123,6 +133,11 @@ export default function ReportsPage() {
                 description: "No se pudo eliminar el reporte.",
             });
         }
+    };
+
+    const handleViewDetails = (accident: Accident) => {
+        setSelectedAccident(accident);
+        setIsDetailsDialogOpen(true);
     };
     
     const handleClearFilters = () => {
@@ -304,6 +319,10 @@ export default function ReportsPage() {
                                                         <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => handleViewDetails(accident)}>
+                                                            <Eye className="mr-2 h-4 w-4" />
+                                                            Ver Detalles
+                                                        </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => handleEdit(accident.id!)}>
                                                             <FilePenLine className="mr-2 h-4 w-4" />
                                                             Editar
@@ -344,8 +363,66 @@ export default function ReportsPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+                <DialogContent className="sm:max-w-2xl">
+                    {selectedAccident && (
+                        <>
+                            <DialogHeader>
+                                <DialogTitle>Detalles del Reporte de Accidente</DialogTitle>
+                                <DialogDescription>
+                                    Información completa del accidente ocurrido en {selectedAccident.location}.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                                <div className="space-y-4">
+                                    <div>
+                                        <h4 className="font-semibold text-sm">Ubicación</h4>
+                                        <p className="text-muted-foreground">{selectedAccident.addressPrefix} {selectedAccident.address}</p>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-sm">Fecha y Hora</h4>
+                                        <p className="text-muted-foreground">{format(new Date(selectedAccident.dateTime), 'dd \'de\' LLLL \'de\' yyyy, HH:mm', { locale: es })}</p>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-sm">Tipo de Accidente</h4>
+                                        <p className="text-muted-foreground">{typeLabels[selectedAccident.type] || 'No especificado'}</p>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-sm">Causa Probable</h4>
+                                        <p className="text-muted-foreground">{causeLabels[selectedAccident.cause] || 'No especificada'}</p>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-sm">Estado del Cruce</h4>
+                                        <p className="text-muted-foreground">{crossingLabels[selectedAccident.crossingStatus] || 'No especificado'}</p>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-sm">Observaciones</h4>
+                                        <p className="text-muted-foreground text-pretty">{selectedAccident.observations || 'Sin observaciones.'}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-4">
+                                     <div>
+                                        <h4 className="font-semibold text-sm">Ubicación Geográfica</h4>
+                                        <div className="h-64 mt-2 rounded-md overflow-hidden">
+                                        <LocationPicker 
+                                            initialCenter={selectedAccident ? [selectedAccident.latitude, selectedAccident.longitude] : undefined}
+                                            onLocationSelect={() => {}} 
+                                            readOnly={true}
+                                        />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild>
+                                    <Button type="button" variant="secondary">Cerrar</Button>
+                                </DialogClose>
+                            </DialogFooter>
+                        </>
+                    )}
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
-
-    
