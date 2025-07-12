@@ -3,7 +3,7 @@
 
 import 'leaflet/dist/leaflet.css';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect } from 'react';
 import L from 'leaflet';
 
 // leaflet.heat depends on the global L object, so we need to handle it carefully
@@ -49,20 +49,15 @@ const Heatmap: React.FC<HeatmapProps> = ({ data }) => {
   // Default coordinates for Florida, Valle del Cauca
   const position: [number, number] = [3.423, -76.324];
 
-  const displayMap = useMemo(
-    () => (
-      <MapContainer center={position} zoom={14} style={{ height: '100%', width: '100%' }}>
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        />
-        <HeatmapLayer data={data} />
-      </MapContainer>
-    ),
-    [data]
+  return (
+    <MapContainer center={position} zoom={14} style={{ height: '100%', width: '100%' }}>
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      />
+      <HeatmapLayer data={data} />
+    </MapContainer>
   );
-
-  return <>{displayMap}</>;
 };
 
 export default Heatmap;
