@@ -16,8 +16,8 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import type { DateRange } from "react-day-picker";
-import { analyzeCriticalZones, type AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones";
 import { useToast } from "@/hooks/use-toast";
+import type { AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones";
 
 export default function AnalysisPage() {
     const { toast } = useToast();
@@ -51,6 +51,7 @@ export default function AnalysisPage() {
         };
         fetchDropdownOptions();
     }, [toast]);
+
 
     const handleClearFilters = () => {
         setDateFilter(undefined);
@@ -111,6 +112,9 @@ export default function AnalysisPage() {
             const fromDate = dateFilter?.from ? format(dateFilter.from, 'yyyy-MM-dd') : 'inicio';
             const toDate = dateFilter?.to ? format(dateFilter.to, 'yyyy-MM-dd') : 'fin';
             const criteria = `Analizar accidentes entre ${fromDate} y ${toDate}. Considerar una zona como crítica si tiene más de 2 accidentes.`;
+
+            // Lazily import and call the server action here.
+            const { analyzeCriticalZones } = await import('@/ai/flows/analyze-critical-zones');
 
             const result = await analyzeCriticalZones({
                 historicalAccidentData,
