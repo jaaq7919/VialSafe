@@ -2,19 +2,20 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, FilterX, Lightbulb, Loader2, OctagonAlert } from "lucide-react";
+import { Calendar as CalendarIcon, FilterX, Lightbulb, Loader2, OctagonAlert, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { getSettings, type SettingItem } from '@/services/settings';
 import { useToast } from "@/hooks/use-toast";
-import { runDbscanAnalysis, type Cluster } from "./actions";
+import { runDbscanAnalysis } from "./actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import type { AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones";
 
 export default function AnalysisPage() {
     const { toast } = useToast();
@@ -27,7 +28,7 @@ export default function AnalysisPage() {
     const [endDate, setEndDate] = useState<Date | undefined>();
 
     const [isLoading, setIsLoading] = useState(false);
-    const [analysisResult, setAnalysisResult] = useState<Cluster[] | null>(null);
+    const [analysisResult, setAnalysisResult] = useState<AnalyzeCriticalZonesOutput | null>(null);
     const [analysisError, setAnalysisError] = useState<string | null>(null);
     const [wasAnalyzed, setWasAnalyzed] = useState(false);
 
@@ -70,16 +71,16 @@ export default function AnalysisPage() {
             const filters = {
                 startDate: startDate?.toISOString().split('T')[0],
                 endDate: endDate?.toISOString().split('T')[0],
-                type: typeFilter === 'all' ? undefined : typeFilter,
-                cause: causeFilter === 'all' ? undefined : causeFilter,
+                type: typeFilter,
+                cause: causeFilter,
             };
             const result = await runDbscanAnalysis(filters);
             
             if (result.error) {
                 setAnalysisError(result.error);
                 setAnalysisResult(null);
-            } else if (result.clusters) {
-                 setAnalysisResult(result.clusters);
+            } else if (result.analysis) {
+                 setAnalysisResult(result.analysis);
                  setAnalysisError(null);
             }
 
@@ -96,7 +97,7 @@ export default function AnalysisPage() {
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Análisis de Zonas Críticas</h1>
                 <p className="text-muted-foreground mt-1">
-                    Use el algoritmo DBSCAN para encontrar agrupaciones geográficas de accidentes y descubrir puntos críticos.
+                    Use IA y DBSCAN para encontrar y analizar agrupaciones geográficas de accidentes y descubrir puntos críticos.
                 </p>
             </div>
 
@@ -213,9 +214,9 @@ export default function AnalysisPage() {
                 {isLoading && (
                     <div className="flex flex-col items-center justify-center text-center text-muted-foreground bg-card p-8 rounded-lg border">
                         <Loader2 className="w-12 h-12 mb-4 animate-spin text-primary" />
-                        <h3 className="text-lg font-semibold text-foreground">Analizando datos...</h3>
+                        <h3 className="text-lg font-semibold text-foreground">Analizando datos con IA...</h3>
                         <p className="mt-2 max-w-md">
-                           Ejecutando el algoritmo DBSCAN para encontrar concentraciones geográficas de accidentes. Esto puede tardar unos segundos.
+                           Identificando clusters geográficos con DBSCAN y luego pidiendo a la IA que los interprete. Esto puede tardar unos segundos.
                         </p>
                     </div>
                 )}
@@ -230,35 +231,46 @@ export default function AnalysisPage() {
 
                 {!isLoading && !analysisError && wasAnalyzed && (
                     <>
-                        {analysisResult && analysisResult.length > 0 ? (
+                        {analysisResult && analysisResult.criticalZones.length > 0 ? (
                             <div>
-                                <h2 className="text-2xl font-bold tracking-tight mb-4">Resultados del Análisis: {analysisResult.length} Zonas Críticas Encontradas</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {analysisResult.map((cluster) => (
-                                    <Card key={cluster.clusterId}>
+                                <h2 className="text-2xl font-bold tracking-tight mb-4">Resultados del Análisis IA: {analysisResult.criticalZones.length} Zonas Críticas Identificadas</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                                {analysisResult.criticalZones.map((zone, index) => (
+                                    <Card key={index} className="flex flex-col">
                                         <CardHeader>
-                                            <CardTitle>Zona Crítica #{cluster.clusterId + 1}</CardTitle>
-                                            <CardDescription>
-                                                {cluster.accidentCount} accidentes en un área pequeña.
+                                            <CardTitle className="flex items-center gap-2">
+                                                <OctagonAlert className="w-6 h-6 text-destructive" />
+                                                <span>{zone.location}</span>
+                                            </CardTitle>
+                                             <CardDescription>
+                                                {zone.reason}
                                             </CardDescription>
                                         </CardHeader>
-                                        <CardContent className="space-y-2">
-                                            <p className="text-sm"><span className="font-semibold">Ubicación más común:</span> {cluster.representativeLocation}</p>
-                                            <p className="text-sm"><span className="font-semibold">Causas comunes:</span> {cluster.causeSummary}</p>
-                                            <p className="text-sm"><span className="font-semibold">Periodo:</span> {cluster.period}</p>
-                                            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Fechas:</span> {cluster.accidentDatesSummary}</p>
+                                        <CardContent className="flex-grow">
+                                           <p className="text-sm font-bold">{zone.accidentCount} accidentes registrados</p>
                                         </CardContent>
                                     </Card>
                                 ))}
                                 </div>
+                                 <Card>
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <FileText className="w-5 h-5" />
+                                            Resumen del Analista IA
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-sm text-muted-foreground">{analysisResult.summary}</p>
+                                    </CardContent>
+                                 </Card>
                            </div>
                         ) : (
                              <Card>
                                 <CardContent className="p-8 text-center text-muted-foreground">
                                     <OctagonAlert className="mx-auto h-12 w-12 mb-4 text-gray-400" />
-                                    <h3 className="text-lg font-semibold">Análisis Completado Sin Resultados</h3>
+                                    <h3 className="text-lg font-semibold">Análisis Completado Sin Zonas Críticas</h3>
                                     <p className="mt-2 max-w-md mx-auto">
-                                        No se encontraron zonas de alta concentración de accidentes con los filtros y parámetros actuales. Puede intentar con un rango de fechas más amplio o ajustar los parámetros de DBSCAN.
+                                        No se encontraron zonas de alta concentración de accidentes con los filtros y parámetros actuales, o la IA no consideró ninguna zona lo suficientemente crítica como para reportarla.
                                     </p>
                                 </CardContent>
                             </Card>
@@ -272,7 +284,7 @@ export default function AnalysisPage() {
                             <Lightbulb className="mx-auto h-12 w-12 mb-4 text-gray-400" />
                             <h3 className="text-lg font-semibold">Listo para Analizar</h3>
                             <p className="mt-2 max-w-md mx-auto">
-                               Ajuste los filtros según sea necesario y presione el botón "Analizar" para que el algoritmo DBSCAN identifique geográficamente las zonas con mayor concentración de accidentes.
+                               Ajuste los filtros según sea necesario y presione el botón "Analizar" para que la IA identifique e interprete las zonas con mayor concentración de accidentes.
                             </p>
                         </CardContent>
                     </Card>
