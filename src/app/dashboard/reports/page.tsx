@@ -184,7 +184,7 @@ export default function ReportsPage() {
 
         let csvContent = "data:text/csv;charset=utf-8,";
         const headers = ["Ubicacion", "Fecha", "Hora", "Tipo", "Causa", "Estado del Cruce", "Observaciones", "Latitud", "Longitud"];
-        csvContent += headers.join(",") + "\\n"; 
+        csvContent += headers.join(",") + "\n"; 
 
         filteredAccidents.forEach(row => {
             const rowArray = [
@@ -198,7 +198,7 @@ export default function ReportsPage() {
                 `"${row.latitude}"`,
                 `"${row.longitude}"`,
             ];
-            csvContent += rowArray.join(",") + "\\n";
+            csvContent += rowArray.join(",") + "\n";
         });
         
         const encodedUri = encodeURI(csvContent);
@@ -428,7 +428,7 @@ export default function ReportsPage() {
                             <DialogHeader>
                                 <DialogTitle>Detalles del Reporte de Accidente</DialogTitle>
                                 <DialogDescription>
-                                    Información completa del accidente ocurrido en {selectedAccident.location}.
+                                    Información completa del accidente ocurrido en {selectedAccident.addressPrefix} {selectedAccident.address}.
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
