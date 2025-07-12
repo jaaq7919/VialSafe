@@ -18,6 +18,7 @@ export interface Cluster {
     representativeLocation: string;
     causeSummary: string;
     period: string;
+    accidentDatesSummary: string; // Nuevo campo
     accidents: Accident[];
 }
 
@@ -93,16 +94,18 @@ export async function runDbscanAnalysis(filters: AnalysisFilters): Promise<{ clu
                 const causeCounts = causes.reduce((acc, cause) => { acc[cause] = (acc[cause] || 0) + 1; return acc; }, {} as {[key: string]: number});
                 const causeSummary = Object.entries(causeCounts).map(([cause, count]) => `${count} por ${cause}`).join(', ');
 
-                // Get date range
+                // Get date range and summary
                 const dates = cluster.map(acc => new Date(acc.dateTime));
                 const period = `${format(min(dates), 'yyyy-MM-dd')} a ${format(max(dates), 'yyyy-MM-dd')}`;
+                const accidentDatesSummary = dates.map(d => format(d, 'yyyy-MM-dd')).join(', ');
                 
                 return { 
                     clusterId: index, 
                     accidentCount, 
                     representativeLocation, 
                     causeSummary, 
-                    period, 
+                    period,
+                    accidentDatesSummary, 
                     accidents: cluster 
                 };
             });

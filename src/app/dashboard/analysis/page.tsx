@@ -237,10 +237,11 @@ export default function AnalysisPage() {
                                                 {cluster.accidentCount} accidentes en un área pequeña.
                                             </CardDescription>
                                         </CardHeader>
-                                        <CardContent>
+                                        <CardContent className="space-y-2">
                                             <p className="text-sm"><span className="font-semibold">Ubicación más común:</span> {cluster.representativeLocation}</p>
-                                            <p className="text-sm mt-2"><span className="font-semibold">Causas comunes:</span> {cluster.causeSummary}</p>
-                                            <p className="text-sm text-muted-foreground mt-1">Periodo: {cluster.period}</p>
+                                            <p className="text-sm"><span className="font-semibold">Causas comunes:</span> {cluster.causeSummary}</p>
+                                            <p className="text-sm"><span className="font-semibold">Periodo:</span> {cluster.period}</p>
+                                            <p className="text-sm text-muted-foreground"><span className="font-semibold text-foreground">Fechas:</span> {cluster.accidentDatesSummary}</p>
                                         </CardContent>
                                     </Card>
                                 ))}
