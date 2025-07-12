@@ -22,6 +22,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import dynamic from "next/dynamic";
+import { Label } from "@/components/ui/label";
 
 const LocationPicker = dynamic(() => import('@/components/client/location-picker'), {
     ssr: false,
@@ -35,8 +36,6 @@ export const crossingLabels: { [key: string]: string } = {
     'inexistente': 'Inexistente',
 };
 
-const ROWS_PER_PAGE = 10;
-
 export default function ReportsPage() {
     const { toast } = useToast();
     const router = useRouter();
@@ -48,6 +47,7 @@ export default function ReportsPage() {
     const [dateFilter, setDateFilter] = useState<DateRange | undefined>();
     
     const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
     
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [accidentIdToDelete, setAccidentIdToDelete] = useState<string | null>(null);
@@ -118,12 +118,12 @@ export default function ReportsPage() {
         });
     }, [accidents, locationFilter, causeFilter, dateFilter]);
 
-    const totalPages = Math.ceil(filteredAccidents.length / ROWS_PER_PAGE);
+    const totalPages = Math.ceil(filteredAccidents.length / rowsPerPage);
     const paginatedAccidents = useMemo(() => {
-        const startIndex = (currentPage - 1) * ROWS_PER_PAGE;
-        const endIndex = startIndex + ROWS_PER_PAGE;
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
         return filteredAccidents.slice(startIndex, endIndex);
-    }, [filteredAccidents, currentPage]);
+    }, [filteredAccidents, currentPage, rowsPerPage]);
 
 
     const handleEdit = (accidentId: string) => {
@@ -359,26 +359,49 @@ export default function ReportsPage() {
                             </TableBody>
                         </Table>
                     </div>
-                     <div className="flex items-center justify-end space-x-2 py-4">
-                        <span className="text-sm text-muted-foreground">
-                            Página {totalPages > 0 ? currentPage : 0} de {totalPages}
-                        </span>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                            disabled={currentPage === 1}
-                        >
-                            Anterior
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                            disabled={currentPage === totalPages}
-                        >
-                            Siguiente
-                        </Button>
+                     <div className="flex items-center justify-between space-x-2 py-4">
+                        <div className="flex items-center gap-2">
+                             <Label htmlFor="rows-per-page" className="text-sm text-muted-foreground whitespace-nowrap">Registros por página</Label>
+                             <Select
+                                value={`${rowsPerPage}`}
+                                onValueChange={(value) => {
+                                    setRowsPerPage(Number(value));
+                                    setCurrentPage(1);
+                                }}
+                            >
+                                <SelectTrigger id="rows-per-page" className="h-8 w-[70px]">
+                                    <SelectValue placeholder={`${rowsPerPage}`} />
+                                </SelectTrigger>
+                                <SelectContent side="top">
+                                    {[10, 20, 50, 100].map((pageSize) => (
+                                        <SelectItem key={pageSize} value={`${pageSize}`}>
+                                            {pageSize}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                                Página {totalPages > 0 ? currentPage : 0} de {totalPages}
+                            </span>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                            >
+                                Anterior
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                            >
+                                Siguiente
+                            </Button>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -460,5 +483,7 @@ export default function ReportsPage() {
         </>
     );
 }
+
+    
 
     
