@@ -3,8 +3,7 @@
 
 import { getAccidents, type Accident } from "@/services/accidents";
 import { dbscan } from "@/lib/dbscan";
-import { format, min, max } from 'date-fns';
-import { analyzeCriticalZones, type AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones";
+import { format, min, max, differenceInDays } from 'date-fns';
 
 interface AnalysisFilters {
     startDate?: string;
@@ -13,7 +12,22 @@ interface AnalysisFilters {
     cause?: string;
 }
 
-export async function runDbscanAnalysis(filters: AnalysisFilters): Promise<{ analysis?: AnalyzeCriticalZonesOutput, error?: string }> {
+// Se define la estructura del resultado directamente aquí, ya que no se usará la IA.
+export interface CriticalZone {
+    location: string;
+    accidentCount: number;
+    reason: string;
+    period: string;
+    causeSummary: string;
+}
+
+export interface AnalysisResult {
+    criticalZones: CriticalZone[];
+    summary: string;
+}
+
+
+export async function runDbscanAnalysis(filters: AnalysisFilters): Promise<{ analysis?: AnalysisResult, error?: string }> {
     try {
         const allAccidents = await getAccidents();
         
@@ -62,10 +76,10 @@ export async function runDbscanAnalysis(filters: AnalysisFilters): Promise<{ ana
         const significantClusters = clusters.filter(c => c && c.length > 0);
 
         if (significantClusters.length === 0) {
-            return { analysis: { criticalZones: [], summary: "No se encontraron agrupaciones de accidentes con los criterios actuales." } };
+            return { analysis: { criticalZones: [], summary: "Análisis completado. No se encontraron agrupaciones de accidentes (zonas críticas) con los criterios actuales." } };
         }
         
-        const accidentClusters = significantClusters.map((cluster, index) => {
+        const criticalZones: CriticalZone[] = significantClusters.map((cluster) => {
             const accidentCount = cluster.length;
             
             const locations = cluster.map(acc => `${acc.addressPrefix} ${acc.address}`);
@@ -76,28 +90,37 @@ export async function runDbscanAnalysis(filters: AnalysisFilters): Promise<{ ana
             const causeCounts = causes.reduce((acc, cause) => { acc[cause] = (acc[cause] || 0) + 1; return acc; }, {} as {[key: string]: number});
             const causeSummary = Object.entries(causeCounts).map(([cause, count]) => `${count} por ${cause}`).join(', ');
 
+            const topCause = Object.keys(causeCounts).reduce((a, b) => causeCounts[a] > causeCounts[b] ? a : b, 'desconocida');
+
             const dates = cluster.map(acc => new Date(acc.dateTime));
-            const period = `${format(min(dates), 'yyyy-MM-dd')} a ${format(max(dates), 'yyyy-MM-dd')}`;
-            
+            const minDate = min(dates);
+            const maxDate = max(dates);
+            const period = `${format(minDate, 'yyyy-MM-dd')} a ${format(maxDate, 'yyyy-MM-dd')}`;
+            const daysDiff = differenceInDays(maxDate, minDate);
+
+            // *** Lógica para generar la razón basada en reglas ***
+            let reason = `Alta concentración de ${accidentCount} accidentes.`;
+            if (topCause !== 'desconocida') {
+                reason += ` La causa principal es "${topCause.replace(/-/g, ' ')}".`;
+            }
+            if (daysDiff <= 30 && accidentCount > 2) {
+                reason += ` Ocurrieron en un corto período de tiempo.`;
+            } else if (daysDiff > 180) {
+                reason += ` Se han registrado de forma recurrente en el tiempo.`
+            }
+
             return { 
-                clusterId: index, 
+                location: representativeLocation,
                 accidentCount, 
-                representativeLocation, 
-                causeSummary, 
+                reason,
                 period,
+                causeSummary,
             };
         });
+        
+        const summary = `Se identificaron ${criticalZones.length} zonas críticas. La zona con más incidentes es "${criticalZones.reduce((a,b) => a.accidentCount > b.accidentCount ? a : b).location}" con ${criticalZones.reduce((a,b) => a.accidentCount > b.accidentCount ? a : b).accidentCount} accidentes.`;
 
-        const analysisPeriod = (filters.startDate && filters.endDate) 
-            ? `del ${filters.startDate} al ${filters.endDate}`
-            : 'de todo el histórico';
-
-        const analysisResult = await analyzeCriticalZones({
-            accidentClusters,
-            analysisPeriod,
-        });
-            
-        return { analysis: analysisResult };
+        return { analysis: { criticalZones, summary } };
 
     } catch (error) {
         console.error("Error in runDbscanAnalysis: ", error);

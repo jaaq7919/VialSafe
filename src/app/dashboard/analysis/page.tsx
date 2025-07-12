@@ -13,9 +13,8 @@ import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { getSettings, type SettingItem } from '@/services/settings';
 import { useToast } from "@/hooks/use-toast";
-import { runDbscanAnalysis } from "./actions";
+import { runDbscanAnalysis, type AnalysisResult } from "./actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import type { AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones";
 
 export default function AnalysisPage() {
     const { toast } = useToast();
@@ -28,7 +27,7 @@ export default function AnalysisPage() {
     const [endDate, setEndDate] = useState<Date | undefined>();
 
     const [isLoading, setIsLoading] = useState(false);
-    const [analysisResult, setAnalysisResult] = useState<AnalyzeCriticalZonesOutput | null>(null);
+    const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
     const [analysisError, setAnalysisError] = useState<string | null>(null);
     const [wasAnalyzed, setWasAnalyzed] = useState(false);
 
@@ -97,7 +96,7 @@ export default function AnalysisPage() {
             <div>
                 <h1 className="text-3xl font-bold tracking-tight">Análisis de Zonas Críticas</h1>
                 <p className="text-muted-foreground mt-1">
-                    Use IA y DBSCAN para encontrar y analizar agrupaciones geográficas de accidentes y descubrir puntos críticos.
+                    Use el algoritmo DBSCAN para encontrar y analizar agrupaciones geográficas de accidentes y descubrir puntos críticos.
                 </p>
             </div>
 
@@ -214,9 +213,9 @@ export default function AnalysisPage() {
                 {isLoading && (
                     <div className="flex flex-col items-center justify-center text-center text-muted-foreground bg-card p-8 rounded-lg border">
                         <Loader2 className="w-12 h-12 mb-4 animate-spin text-primary" />
-                        <h3 className="text-lg font-semibold text-foreground">Analizando datos con IA...</h3>
+                        <h3 className="text-lg font-semibold text-foreground">Analizando datos...</h3>
                         <p className="mt-2 max-w-md">
-                           Identificando clusters geográficos con DBSCAN y luego pidiendo a la IA que los interprete. Esto puede tardar unos segundos.
+                           Identificando clusters geográficos con DBSCAN. Esto puede tardar unos segundos.
                         </p>
                     </div>
                 )}
@@ -233,7 +232,7 @@ export default function AnalysisPage() {
                     <>
                         {analysisResult && analysisResult.criticalZones.length > 0 ? (
                             <div>
-                                <h2 className="text-2xl font-bold tracking-tight mb-4">Resultados del Análisis IA: {analysisResult.criticalZones.length} Zonas Críticas Identificadas</h2>
+                                <h2 className="text-2xl font-bold tracking-tight mb-4">Resultados del Análisis: {analysisResult.criticalZones.length} Zonas Críticas Identificadas</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                                 {analysisResult.criticalZones.map((zone, index) => (
                                     <Card key={index} className="flex flex-col">
@@ -246,8 +245,10 @@ export default function AnalysisPage() {
                                                 {zone.reason}
                                             </CardDescription>
                                         </CardHeader>
-                                        <CardContent className="flex-grow">
+                                        <CardContent className="flex-grow space-y-2">
                                            <p className="text-sm font-bold">{zone.accidentCount} accidentes registrados</p>
+                                           <p className="text-xs text-muted-foreground"><strong>Periodo:</strong> {zone.period}</p>
+                                           <p className="text-xs text-muted-foreground"><strong>Causas:</strong> {zone.causeSummary}</p>
                                         </CardContent>
                                     </Card>
                                 ))}
@@ -256,7 +257,7 @@ export default function AnalysisPage() {
                                     <CardHeader>
                                         <CardTitle className="flex items-center gap-2">
                                             <FileText className="w-5 h-5" />
-                                            Resumen del Analista IA
+                                            Resumen General del Análisis
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent>
@@ -270,7 +271,7 @@ export default function AnalysisPage() {
                                     <OctagonAlert className="mx-auto h-12 w-12 mb-4 text-gray-400" />
                                     <h3 className="text-lg font-semibold">Análisis Completado Sin Zonas Críticas</h3>
                                     <p className="mt-2 max-w-md mx-auto">
-                                        No se encontraron zonas de alta concentración de accidentes con los filtros y parámetros actuales, o la IA no consideró ninguna zona lo suficientemente crítica como para reportarla.
+                                        No se encontraron zonas de alta concentración de accidentes con los filtros y parámetros actuales.
                                     </p>
                                 </CardContent>
                             </Card>
@@ -284,7 +285,7 @@ export default function AnalysisPage() {
                             <Lightbulb className="mx-auto h-12 w-12 mb-4 text-gray-400" />
                             <h3 className="text-lg font-semibold">Listo para Analizar</h3>
                             <p className="mt-2 max-w-md mx-auto">
-                               Ajuste los filtros según sea necesario y presione el botón "Analizar" para que la IA identifique e interprete las zonas con mayor concentración de accidentes.
+                               Ajuste los filtros según sea necesario y presione el botón "Analizar" para que el sistema identifique las zonas con mayor concentración de accidentes.
                             </p>
                         </CardContent>
                     </Card>
