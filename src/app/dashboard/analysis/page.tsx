@@ -233,7 +233,19 @@ export default function AnalysisPage() {
                         {analysisResult && analysisResult.criticalZones.length > 0 ? (
                             <div>
                                 <h2 className="text-2xl font-bold tracking-tight mb-4">Resultados del Análisis: {analysisResult.criticalZones.length} Zonas Críticas Identificadas</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                                 <Card className="mb-6">
+                                    <CardHeader>
+                                        <CardTitle className="flex items-center gap-2">
+                                            <FileText className="w-5 h-5" />
+                                            Resumen General del Análisis
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-sm text-muted-foreground">{analysisResult.summary}</p>
+                                    </CardContent>
+                                 </Card>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {analysisResult.criticalZones.map((zone, index) => (
                                     <Card key={index} className="flex flex-col">
                                         <CardHeader>
@@ -253,17 +265,6 @@ export default function AnalysisPage() {
                                     </Card>
                                 ))}
                                 </div>
-                                 <Card>
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <FileText className="w-5 h-5" />
-                                            Resumen General del Análisis
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <p className="text-sm text-muted-foreground">{analysisResult.summary}</p>
-                                    </CardContent>
-                                 </Card>
                            </div>
                         ) : (
                              <Card>
