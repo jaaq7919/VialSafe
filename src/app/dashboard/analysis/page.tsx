@@ -18,7 +18,6 @@ import { es } from 'date-fns/locale';
 import type { DateRange } from "react-day-picker";
 import { useToast } from "@/hooks/use-toast";
 import type { AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones";
-import { handleAnalysis } from "./actions";
 
 export default function AnalysisPage() {
     const { toast } = useToast();
@@ -87,6 +86,7 @@ export default function AnalysisPage() {
                 return dateMatch && typeMatch && causeMatch;
             });
             
+            const { handleAnalysis } = await import('./actions');
             const response = await handleAnalysis(filteredAccidents, dateFilter);
 
             if (response.error) {
