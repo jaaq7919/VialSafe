@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from "react";
@@ -5,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Lightbulb, Wind, Beer, FileText, OctagonAlert } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { suggestControlPosts, type SuggestControlPostsOutput } from '@/ai/flows/suggest-control-posts';
+import { suggestControlPosts } from '@/ai/flows/suggest-control-posts';
+import type { SuggestControlPostsOutput } from '@/ai/flows/suggest-control-posts.types';
 import { getAccidents } from '@/services/accidents';
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";

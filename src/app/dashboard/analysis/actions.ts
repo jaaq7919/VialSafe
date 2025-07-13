@@ -4,7 +4,8 @@
 import { getAccidents, type Accident } from "@/services/accidents";
 import { dbscan } from "@/lib/dbscan";
 import { format, min, max, differenceInDays } from 'date-fns';
-import type { AnalyzeCriticalZonesInput, AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones";
+import { analyzeCriticalZones } from "@/ai/flows/analyze-critical-zones";
+import type { AnalyzeCriticalZonesInput, AnalyzeCriticalZonesOutput } from "@/ai/flows/analyze-critical-zones.types";
 
 interface AnalysisFilters {
     startDate?: string;
@@ -82,8 +83,6 @@ export async function runDbscanAnalysis(filters: AnalysisFilters): Promise<{ ana
             return { analysis: { criticalZones: [], summary: "Análisis completado. No se encontraron agrupaciones de accidentes (zonas críticas) con los criterios actuales." } };
         }
         
-        const { analyzeCriticalZones } = await import('@/ai/flows/analyze-critical-zones');
-
         const accidentClustersForAI = significantClusters.map((cluster, index) => {
              const accidentCount = cluster.length;
             const locations = cluster.map(acc => `${acc.addressPrefix} ${acc.address}`);

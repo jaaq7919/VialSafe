@@ -1,10 +1,8 @@
-'use server';
 /**
  * @fileOverview Initializes and exports the Genkit AI instance.
  *
  * This file sets up the core Genkit object with the necessary plugins,
  * in this case, the Google AI plugin. The exported 'ai' object is
-
  * a singleton that will be used throughout the application to define
  * and run AI flows, prompts, and tools.
  */
@@ -23,7 +21,6 @@
 // export const ai = genkit({
 //   plugins: [googleAI({apiVersion: 'v1beta'})],
 // });
-
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
@@ -68,3 +65,5 @@ export async function generateWithConfig(prompt: string, config: {
     throw error;
   }
 }
+
+export { genAI };

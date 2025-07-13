@@ -11,6 +11,10 @@ import { format, min, max } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { dbscan } from "@/lib/dbscan";
+import { analyzeCriticalZones } from '@/ai/flows/analyze-critical-zones';
+import { suggestRoadInterventions } from '@/ai/flows/suggest-road-interventions';
+import { suggestControlPosts } from '@/ai/flows/suggest-control-posts';
+import { generateExecutiveSummary } from '@/ai/flows/generate-executive-summary';
 
 export default function SummaryPage() {
     const { toast } = useToast();
@@ -32,12 +36,6 @@ export default function SummaryPage() {
                 return;
             }
             
-            // Lazy load AI actions
-            const { analyzeCriticalZones } = await import('@/ai/flows/analyze-critical-zones');
-            const { suggestRoadInterventions } = await import('@/ai/flows/suggest-road-interventions');
-            const { suggestControlPosts } = await import('@/ai/flows/suggest-control-posts');
-            const { generateExecutiveSummary } = await import('@/ai/flows/generate-executive-summary');
-
             // Step 1: Analyze critical zones with DBSCAN
             const points = allAccidents.map(acc => [acc.latitude, acc.longitude]);
             const clusterAssignments = dbscan(points, 0.0005, 2);
@@ -52,13 +50,13 @@ export default function SummaryPage() {
                 }
             });
 
-             if (!clusters || clusters.filter(c => c.length > 0).length === 0) {
+             if (!clusters || clusters.filter(c => c && c.length > 0).length === 0) {
                 setError('El algoritmo DBSCAN no encontró agrupaciones geográficas para analizar. No se puede generar el resumen.');
                 setIsLoading(false);
                 return;
             }
 
-            const accidentClusters = clusters.filter(c => c.length > 0).map((cluster, index) => {
+            const accidentClusters = clusters.filter(c => c && c.length > 0).map((cluster, index) => {
                 const accidentCount = cluster.length;
                 const locations = cluster.map(acc => `${acc.addressPrefix} ${acc.address}`);
                 const locationCounts = locations.reduce((acc, loc) => { acc[loc] = (acc[loc] || 0) + 1; return acc; }, {} as {[key: string]: number});

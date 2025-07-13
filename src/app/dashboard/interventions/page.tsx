@@ -48,6 +48,7 @@ export default function InterventionsPage() {
             // Step 1: Get all accidents
             setProgressMessage("Paso 1: Recopilando todos los reportes de accidentes...");
             const allAccidents = await getAccidents();
+            
             if (allAccidents.length < 2) {
                 setError("Fallo en Paso 1: Se necesitan al menos 2 accidentes registrados para generar sugerencias.");
                 setIsLoading(false);
@@ -180,7 +181,7 @@ export default function InterventionsPage() {
                     </div>
                 )}
                 
-                 {error && (
+                 {error && !isLoading && (
                      <Alert variant="destructive">
                         <OctagonAlert className="h-4 w-4" />
                         <AlertTitle>No se pudieron generar sugerencias</AlertTitle>

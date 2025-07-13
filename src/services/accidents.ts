@@ -44,7 +44,9 @@ const accidentsCollection = collection(db, 'accidents');
 
 // Obtener todos los accidentes
 export async function getAccidents(): Promise<Accident[]> {
+  console.log("*- Paso 1=>1");
   const snapshot = await getDocs(accidentsCollection);
+  console.log("*- Paso 1=>2");
   return snapshot.docs.map(doc => {
     const data = doc.data();
     return {
