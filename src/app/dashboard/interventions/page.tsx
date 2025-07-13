@@ -23,6 +23,11 @@ const interventionIcons: { [key: string]: React.ElementType } = {
 };
 
 const getIconForIntervention = (intervention: string): React.ElementType => {
+    // Failsafe check: if intervention is not a valid string, return default icon immediately.
+    if (typeof intervention !== 'string' || !intervention) {
+        return interventionIcons['default'];
+    }
+    
     const lowerType = intervention.toLowerCase();
     for (const key in interventionIcons) {
         if (key !== 'default' && lowerType.includes(key)) {
@@ -119,7 +124,7 @@ export default function InterventionsPage() {
                     `"${acc.type}"`,
                     `"${acc.cause}"`,
                     `"${acc.crossingStatus}"`,
-                    `"${acc.observations || ''}"`,
+                    `"${(acc.observations || '').replace(/"/g, '""')}"`,
                     `"${acc.latitude}"`,
                     `"${acc.longitude}"`
                 ].join(',');
@@ -134,7 +139,7 @@ export default function InterventionsPage() {
 
             // Step 5: Present results
              setProgressMessage("Paso 5: Presentando resultados...");
-            if (result && result.recommendations.length > 0) {
+            if (result && result.recommendations && result.recommendations.length > 0) {
                 setRecommendations(result.recommendations);
             } else {
                 setError("Fallo en Paso 4: La IA no generó ninguna recomendación. Puede que los datos actuales no sugieran patrones claros para intervenciones viales.");
