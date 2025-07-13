@@ -49,7 +49,7 @@ export default function InterventionsPage() {
             setProgressMessage("Paso 1: Recopilando todos los reportes de accidentes...");
             const allAccidents = await getAccidents();
             if (allAccidents.length < 2) {
-                setError("Se necesitan al menos 2 accidentes registrados para generar sugerencias.");
+                setError("Fallo en Paso 1: Se necesitan al menos 2 accidentes registrados para generar sugerencias.");
                 setIsLoading(false);
                 return;
             }
@@ -72,7 +72,7 @@ export default function InterventionsPage() {
             
             const significantClusters = clusters.filter(c => c && c.length > 0);
             if (significantClusters.length === 0) {
-                setError("No se encontraron zonas de alta concentración de accidentes para analizar.");
+                setError("Fallo en Paso 2: No se encontraron zonas de alta concentración de accidentes para analizar.");
                 setIsLoading(false);
                 return;
             }
@@ -100,7 +100,7 @@ export default function InterventionsPage() {
             });
             
              if (!analysisResult || analysisResult.criticalZones.length === 0) {
-                setError("La IA no pudo identificar zonas críticas a partir de los datos. No se pueden generar recomendaciones.");
+                setError("Fallo en Paso 3: La IA no pudo identificar zonas críticas a partir de los datos. No se pueden generar recomendaciones.");
                 setIsLoading(false);
                 return;
             }
@@ -136,17 +136,18 @@ export default function InterventionsPage() {
             if (result && result.recommendations.length > 0) {
                 setRecommendations(result.recommendations);
             } else {
-                setError("La IA no generó ninguna recomendación. Puede que los datos actuales no sugieran patrones claros para intervenciones viales.");
+                setError("Fallo en Paso 4: La IA no generó ninguna recomendación. Puede que los datos actuales no sugieran patrones claros para intervenciones viales.");
             }
             setProgressMessage("Proceso finalizado.");
 
-        } catch (e) {
+        } catch (e: any) {
              console.error(e);
-             setError("Ocurrió un error inesperado al contactar al servicio de IA. Por favor, intente de nuevo más tarde.");
+             const errorMessage = `Error durante ${progressMessage.toLowerCase().replace('...', '')}: ${e.message || 'Error inesperado.'}`;
+             setError(errorMessage);
              toast({
                 variant: "destructive",
-                title: "Error de IA",
-                description: "No se pudo generar la recomendación. Verifique la consola para más detalles.",
+                title: "Error en la Generación",
+                description: "No se pudo completar el proceso. Verifique la consola para más detalles.",
             });
         } finally {
             setIsLoading(false);
