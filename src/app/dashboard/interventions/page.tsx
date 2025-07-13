@@ -11,6 +11,7 @@ import { getAccidents, type Accident } from '@/services/accidents';
 import { useToast } from "@/hooks/use-toast";
 import { dbscan } from "@/lib/dbscan";
 import { format, min, max } from 'date-fns';
+import { analyzeCriticalZones } from '@/ai/flows/analyze-critical-zones';
 
 const interventionIcons: { [key: string]: React.ElementType } = {
     'semáforo': TrafficSignal,
@@ -24,7 +25,7 @@ const interventionIcons: { [key: string]: React.ElementType } = {
 const getIconForIntervention = (intervention: string): React.ElementType => {
     const lowerType = intervention.toLowerCase();
     for (const key in interventionIcons) {
-        if (lowerType.includes(key)) {
+        if (key !== 'default' && lowerType.includes(key)) {
             return interventionIcons[key];
         }
     }
@@ -81,7 +82,6 @@ export default function InterventionsPage() {
 
             // Step 3: Call analyzeCriticalZones AI flow
             setProgressMessage("Paso 3: Enviando puntos calientes a la IA para análisis de criticidad...");
-            const { analyzeCriticalZones } = await import('@/ai/flows/analyze-critical-zones');
             const accidentClustersForAI = significantClusters.map((cluster, index) => {
                  const accidentCount = cluster.length;
                 const locations = cluster.map(acc => `${acc.addressPrefix} ${acc.address}`);
