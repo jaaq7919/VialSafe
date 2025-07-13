@@ -4,6 +4,7 @@
  *
  * This file sets up the core Genkit object with the necessary plugins,
  * in this case, the Google AI plugin. The exported 'ai' object is
+
  * a singleton that will be used throughout the application to define
  * and run AI flows, prompts, and tools.
  */
@@ -67,5 +68,3 @@ export async function generateWithConfig(prompt: string, config: {
     throw error;
   }
 }
-
-export { genAI };
