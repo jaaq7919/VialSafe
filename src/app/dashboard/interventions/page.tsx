@@ -189,7 +189,7 @@ export default function InterventionsPage() {
                     </Alert>
                 )}
 
-                {recommendations ? (
+                {recommendations && recommendations.length > 0 ? (
                     <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         {recommendations.map((rec, index) => {
                             const Icon = getIconForIntervention(rec.intervention);
