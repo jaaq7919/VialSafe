@@ -5,37 +5,32 @@
  * @fileOverview Este flujo de IA genera un resumen ejecutivo para directivos.
  */
 
-import {ai} from '@/ai/genkit';
+import { generateContent } from '@/ai/genkit';
 import {z} from 'zod';
 
-const ExecutiveSummaryInputSchema = z.object({
+export const ExecutiveSummaryInputSchema = z.object({
   criticalZonesAnalysis: z.string().describe('Análisis JSON de zonas críticas con alta concentración de accidentes.'),
   interventionRecommendations: z.string().describe('Recomendaciones JSON de intervenciones viales (semáforos, reductores, etc.).'),
   controlPostRecommendations: z.string().describe('Recomendaciones JSON de puestos de control (velocidad, alcoholemia, etc.).'),
 });
 export type ExecutiveSummaryInput = z.infer<typeof ExecutiveSummaryInputSchema>;
 
-const ExecutiveSummaryOutputSchema = z.object({
+export const ExecutiveSummaryOutputSchema = z.object({
   summary: z.string().describe('El texto del resumen ejecutivo redactado en formato markdown.'),
 });
 export type ExecutiveSummaryOutput = z.infer<typeof ExecutiveSummaryOutputSchema>;
 
 
 export async function generateExecutiveSummary(input: ExecutiveSummaryInput): Promise<ExecutiveSummaryOutput> {
-  return generateExecutiveSummaryFlow(input);
-}
+    const { criticalZonesAnalysis, interventionRecommendations, controlPostRecommendations } = input;
 
-const prompt = ai.definePrompt({
-  name: 'generateExecutiveSummaryPrompt',
-  input: {schema: ExecutiveSummaryInputSchema},
-  output: {schema: ExecutiveSummaryOutputSchema},
-  prompt: `Eres un asesor experto para la Secretaría de Tránsito de Florida, Valle del Cauca. Tu tarea es redactar un resumen ejecutivo claro, conciso y profesional para la dirección, basado en los análisis técnicos de la plataforma Centinela Vial.
+    const prompt = `Eres un asesor experto para la Secretaría de Tránsito de Florida, Valle del Cauca. Tu tarea es redactar un resumen ejecutivo claro, conciso y profesional para la dirección, basado en los análisis técnicos de la plataforma Centinela Vial.
 
 Utiliza los siguientes datos JSON para construir tu informe. No inventes información; basa tus conclusiones únicamente en los datos proporcionados.
 
-1.  **Análisis de Zonas Críticas:** {{{criticalZonesAnalysis}}}
-2.  **Recomendaciones de Intervención Vial:** {{{interventionRecommendations}}}
-3.  **Recomendaciones de Puestos de Control:** {{{controlPostRecommendations}}}
+1.  **Análisis de Zonas Críticas:** ${criticalZonesAnalysis}
+2.  **Recomendaciones de Intervención Vial:** ${interventionRecommendations}
+3.  **Recomendaciones de Puestos de Control:** ${controlPostRecommendations}
 
 **Instrucciones para el Resumen Ejecutivo:**
 
@@ -48,17 +43,22 @@ Utiliza los siguientes datos JSON para construir tu informe. No inventes informa
     4.  **Recomendaciones Estratégicas (lista de viñetas):** Agrupa y resume las intervenciones y puestos de control más importantes sugeridos por la IA. (ej: "Se recomienda la instalación de reductores de velocidad en la zona X debido a la alta incidencia de accidentes por esta causa.").
     5.  **Conclusión y Próximos Pasos (1-2 frases):** Concluye reafirmando la importancia de actuar sobre estas recomendaciones para mejorar la seguridad vial.
 
-Tu respuesta final debe ser un único objeto JSON con la clave "summary" conteniendo el informe completo.`,
-});
-
-const generateExecutiveSummaryFlow = ai.defineFlow(
-  {
-    name: 'generateExecutiveSummaryFlow',
-    inputSchema: ExecutiveSummaryInputSchema,
-    outputSchema: ExecutiveSummaryOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
-  }
-);
+**Formatea tu respuesta final como un único objeto JSON que se ajuste al siguiente esquema. NO incluyas markdown (\`\`\`json\`\`\`). Tu respuesta debe ser solo el JSON.**
+  - Esquema JSON de Salida:
+    {
+      "type": "object",
+      "properties": {
+        "summary": { "type": "string", "description": "El texto del resumen ejecutivo redactado en formato markdown." }
+      },
+      "required": ["summary"]
+    }`;
+    
+    try {
+        const resultJson = await generateContent(prompt);
+        const result = JSON.parse(resultJson);
+        return ExecutiveSummaryOutputSchema.parse(result);
+    } catch (error) {
+        console.error("Error generating executive summary with AI:", error);
+        throw new Error("La IA no pudo procesar el resumen ejecutivo.");
+    }
+}

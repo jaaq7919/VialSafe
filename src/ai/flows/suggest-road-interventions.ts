@@ -3,10 +3,10 @@
 /**
  * @fileOverview Este flujo de IA sugiere intervenciones viales específicas para zonas críticas.
  */
-import {ai} from '@/ai/genkit';
+import { generateContent } from '@/ai/genkit';
 import {z} from 'zod';
 
-const SuggestRoadInterventionsInputSchema = z.object({
+export const SuggestRoadInterventionsInputSchema = z.object({
   criticalZoneAnalysis: z.string().describe('Análisis JSON de zonas críticas previamente identificadas, con detalles de ubicación, conteo y causas de accidentes.'),
   accidentData: z.string().describe('Datos históricos de todos los accidentes en formato CSV para contexto adicional.'),
 });
@@ -18,28 +18,23 @@ const InterventionSchema = z.object({
   justification: z.string().describe('La razón detallada por la que se recomienda esta intervención, basada en el análisis de las causas y la frecuencia de los accidentes en esa zona.'),
 });
 
-const SuggestRoadInterventionsOutputSchema = z.object({
+export const SuggestRoadInterventionsOutputSchema = z.object({
   recommendations: z.array(InterventionSchema).describe('Una lista de recomendaciones de intervención vial.'),
 });
 export type SuggestRoadInterventionsOutput = z.infer<typeof SuggestRoadInterventionsOutputSchema>;
 
 export async function suggestRoadInterventions(input: SuggestRoadInterventionsInput): Promise<SuggestRoadInterventionsOutput> {
-  return suggestRoadInterventionsFlow(input);
-}
-
-const prompt = ai.definePrompt({
-  name: 'suggestRoadInterventionsPrompt',
-  input: {schema: SuggestRoadInterventionsInputSchema},
-  output: {schema: SuggestRoadInterventionsOutputSchema},
-  prompt: `Eres un experto en ingeniería y seguridad vial para la secretaría de tránsito de Florida, Valle del Cauca. Tu misión es analizar las zonas críticas de accidentes y proponer intervenciones viales efectivas para reducir la siniestralidad.
+    const { criticalZoneAnalysis, accidentData } = input;
+    
+    const prompt = `Eres un experto en ingeniería y seguridad vial para la secretaría de tránsito de Florida, Valle del Cauca. Tu misión es analizar las zonas críticas de accidentes y proponer intervenciones viales efectivas para reducir la siniestralidad.
 
 Aquí tienes los datos que debes usar:
 
 1.  **Análisis de Zonas Críticas (tu fuente principal):**
-    {{{criticalZoneAnalysis}}}
+    ${criticalZoneAnalysis}
 
 2.  **Datos Crudos de Accidentes (para contexto si lo necesitas):**
-    {{{accidentData}}}
+    ${accidentData}
 
 **Tus Instrucciones:**
 
@@ -51,17 +46,33 @@ Aquí tienes los datos que debes usar:
     *   Si hay problemas de visibilidad nocturna, sugiere "Mejorar iluminación pública".
 3.  **Justifica Cada Recomendación:** Para cada sugerencia, escribe una justificación clara y concisa que enlace directamente la causa del problema con la solución propuesta. Por ejemplo: "Se recomienda la instalación de un semáforo debido a la alta frecuencia de colisiones (X accidentes) causadas por el incumplimiento de la señal de PARE en esta intersección."
 4.  **Genera una recomendación para cada zona crítica identificada en el análisis.**
-5.  **Formatea tu respuesta final como un objeto JSON que se ajuste al esquema solicitado.**`,
-});
-
-const suggestRoadInterventionsFlow = ai.defineFlow(
-  {
-    name: 'suggestRoadInterventionsFlow',
-    inputSchema: SuggestRoadInterventionsInputSchema,
-    outputSchema: SuggestRoadInterventionsOutputSchema,
-  },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
-  }
-);
+5.  **Formatea tu respuesta final como un único objeto JSON que se ajuste al siguiente esquema. NO incluyas markdown (\`\`\`json\`\`\`). Tu respuesta debe ser solo el JSON.**
+    - Esquema JSON de Salida:
+      {
+        "type": "object",
+        "properties": {
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "location": {"type": "string"},
+                "intervention": {"type": "string"},
+                "justification": {"type": "string"}
+              },
+              "required": ["location", "intervention", "justification"]
+            }
+          }
+        },
+        "required": ["recommendations"]
+      }`;
+      
+    try {
+        const resultJson = await generateContent(prompt);
+        const result = JSON.parse(resultJson);
+        return SuggestRoadInterventionsOutputSchema.parse(result);
+    } catch (error) {
+        console.error("Error suggesting road interventions with AI:", error);
+        throw new Error("La IA no pudo procesar las sugerencias de intervención.");
+    }
+}
