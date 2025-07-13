@@ -35,6 +35,7 @@ const getIconForIntervention = (intervention: string): React.ElementType => {
 export default function InterventionsPage() {
     const { toast } = useToast();
     const [isLoading, setIsLoading] = React.useState(false);
+    const [progressMessage, setProgressMessage] = React.useState("");
     const [recommendations, setRecommendations] = React.useState<SuggestRoadInterventionsOutput['recommendations'] | null>(null);
     const [error, setError] = React.useState<string | null>(null);
 
@@ -44,15 +45,18 @@ export default function InterventionsPage() {
         setError(null);
         
         try {
-            // 1. Get all accidents
+            // Step 1: Get all accidents
+            setProgressMessage("Paso 1: Recopilando todos los reportes de accidentes...");
             const allAccidents = await getAccidents();
             if (allAccidents.length < 2) {
                 setError("Se necesitan al menos 2 accidentes registrados para generar sugerencias.");
                 setIsLoading(false);
                 return;
             }
+            setProgressMessage("Paso 1: Completado. Datos de accidentes recopilados.");
 
-            // 2. Run DBSCAN to find clusters
+            // Step 2: Run DBSCAN to find clusters
+            setProgressMessage("Paso 2: Ejecutando análisis geográfico (DBSCAN) para encontrar puntos calientes...");
             const points = allAccidents.map(acc => [acc.latitude, acc.longitude] as [number, number]);
             const clusterAssignments = dbscan(points, 0.0005, 2);
 
@@ -72,8 +76,10 @@ export default function InterventionsPage() {
                 setIsLoading(false);
                 return;
             }
+             setProgressMessage("Paso 2: Completado. Puntos calientes identificados.");
 
-            // 3. Call analyzeCriticalZones AI flow
+            // Step 3: Call analyzeCriticalZones AI flow
+            setProgressMessage("Paso 3: Enviando puntos calientes a la IA para análisis de criticidad...");
             const { analyzeCriticalZones } = await import('@/ai/flows/analyze-critical-zones');
             const accidentClustersForAI = significantClusters.map((cluster, index) => {
                  const accidentCount = cluster.length;
@@ -98,8 +104,10 @@ export default function InterventionsPage() {
                 setIsLoading(false);
                 return;
             }
+            setProgressMessage("Paso 3: Completado. Análisis de criticidad recibido.");
 
-            // 4. Call suggestRoadInterventions AI flow
+            // Step 4: Call suggestRoadInterventions AI flow
+            setProgressMessage("Paso 4: Consultando al experto en tráfico de IA para generar sugerencias viales...");
             const headers = "ubicacion,fecha,hora,tipo,causa,estado_cruce,observaciones,latitud,longitud";
             const csvData = allAccidents.map(acc => {
                 const accDate = new Date(acc.dateTime);
@@ -121,12 +129,16 @@ export default function InterventionsPage() {
                 criticalZoneAnalysis: JSON.stringify(analysisResult),
                 accidentData: historicalAccidentData
             });
+            setProgressMessage("Paso 4: Completado. Sugerencias generadas.");
 
+            // Step 5: Present results
+             setProgressMessage("Paso 5: Presentando resultados...");
             if (result && result.recommendations.length > 0) {
                 setRecommendations(result.recommendations);
             } else {
                 setError("La IA no generó ninguna recomendación. Puede que los datos actuales no sugieran patrones claros para intervenciones viales.");
             }
+            setProgressMessage("Proceso finalizado.");
 
         } catch (e) {
              console.error(e);
@@ -160,9 +172,9 @@ export default function InterventionsPage() {
                 {isLoading && (
                     <div className="flex flex-col items-center justify-center text-center text-muted-foreground bg-card p-8 rounded-lg border">
                         <Loader2 className="w-12 h-12 mb-4 animate-spin text-primary" />
-                        <h3 className="text-lg font-semibold text-foreground">Analizando datos y generando sugerencias...</h3>
-                         <p className="mt-2 max-w-md">
-                           El sistema está identificando zonas críticas y consultando al experto de IA. Este proceso puede tardar unos segundos.
+                        <h3 className="text-lg font-semibold text-foreground">Generando sugerencias...</h3>
+                         <p className="mt-2 max-w-md text-sm">
+                           {progressMessage}
                         </p>
                     </div>
                 )}
