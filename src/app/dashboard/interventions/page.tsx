@@ -24,7 +24,6 @@ const interventionIcons: { [key: string]: React.ElementType } = {
 };
 
 const getIconForIntervention = (intervention: string): React.ElementType => {
-    // Failsafe check: if intervention is not a valid string, return default icon immediately.
     if (typeof intervention !== 'string' || !intervention) {
         return interventionIcons['default'];
     }
@@ -195,7 +194,7 @@ export default function InterventionsPage() {
                     </Alert>
                 )}
 
-                {recommendations && recommendations.length > 0 ? (
+                {recommendations && recommendations.length > 0 && (
                     <Carousel className="w-full">
                         <CarouselContent className="-ml-4">
                             {recommendations.filter(rec => rec && rec.intervention).map((rec, index) => {
@@ -219,13 +218,15 @@ export default function InterventionsPage() {
                                             </Card>
                                         </div>
                                     </CarouselItem>
-                                )
+                                );
                             })}
                         </CarouselContent>
                         <CarouselPrevious className="hidden sm:flex" />
                         <CarouselNext className="hidden sm:flex" />
                     </Carousel>
-                ) : !isLoading && !error && (
+                )}
+                
+                {!isLoading && !error && (!recommendations || recommendations.length === 0) && (
                     <Card>
                         <CardContent className="p-8 text-center text-muted-foreground">
                              <Lightbulb className="mx-auto h-12 w-12 mb-4 text-gray-400" />
