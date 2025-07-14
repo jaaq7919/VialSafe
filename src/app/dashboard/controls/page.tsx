@@ -11,6 +11,7 @@ import type { SuggestControlPostsOutput } from '@/ai/flows/suggest-control-posts
 import { getAccidents } from '@/services/accidents';
 import { format } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
+import { addRecommendation } from "@/services/recommendations";
 
 const controlIcons: { [key: string]: React.ElementType } = {
     'velocidad': Wind,
@@ -75,6 +76,22 @@ export default function ControlsPage() {
 
             if (result && result.recommendations.length > 0) {
                 setRecommendations(result.recommendations);
+
+                // Save recommendations to Firestore
+                for (const rec of result.recommendations) {
+                    await addRecommendation({
+                        type: 'Puesto de Control',
+                        description: rec.controlType,
+                        location: rec.location,
+                        justification: rec.justification,
+                        details: { schedule: rec.schedule }
+                    });
+                }
+                 toast({
+                    title: "Recomendaciones Guardadas",
+                    description: `${result.recommendations.length} nuevas recomendaciones han sido guardadas y están disponibles en la sección de Seguimiento.`,
+                });
+
             } else {
                 setError("La IA no generó ninguna recomendación en esta ocasión. Puede que los datos actuales no sugieran patrones claros para puestos de control.");
             }
@@ -98,7 +115,7 @@ export default function ControlsPage() {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Recomendación de Puestos de Control</h1>
                     <p className="text-muted-foreground mt-1">
-                        Sugerencias estratégicas para la ubicación y horario de puestos de control, generadas por IA.
+                        Genere y guarde sugerencias estratégicas para la ubicación y horario de puestos de control.
                     </p>
                 </div>
                  <Button onClick={handleGenerate} disabled={isLoading}>

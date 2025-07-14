@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Table,
   TableBody,
@@ -13,86 +13,61 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-
-type RecommendationStatus = "Sugerida" | "Aprobada" | "En Ejecución" | "Implementada" | "Rechazada";
-
-type Recommendation = {
-  id: string;
-  type: "Intervención Vial" | "Puesto de Control";
-  description: string;
-  location: string;
-  status: RecommendationStatus;
-  dateSuggested: Date;
-};
-
-const initialRecommendations: Recommendation[] = [
-  {
-    id: "rec1",
-    type: "Intervención Vial",
-    description: "Instalación de Semáforo",
-    location: "Carrera 7 con Calle 11",
-    status: "Sugerida",
-    dateSuggested: new Date("2024-07-01"),
-  },
-  {
-    id: "rec2",
-    type: "Puesto de Control",
-    description: "Control de Velocidad",
-    location: "Salida a Palmira",
-    status: "Aprobada",
-    dateSuggested: new Date("2024-06-25"),
-  },
-  {
-    id: "rec3",
-    type: "Intervención Vial",
-    description: "Implementar Reductores de Velocidad",
-    location: "Frente al parque principal",
-    status: "En Ejecución",
-    dateSuggested: new Date("2024-06-15"),
-  },
-  {
-    id: "rec4",
-    type: "Intervención Vial",
-    description: "Mejorar Señal de PARE",
-    location: "Calle 8 con Carrera 4",
-    status: "Implementada",
-    dateSuggested: new Date("2024-05-20"),
-  },
-  {
-    id: "rec5",
-    type: "Puesto de Control",
-    description: "Control de Alcoholemia",
-    location: "Carrera 7 con Calle 11",
-    status: "Rechazada",
-    dateSuggested: new Date("2024-07-02"),
-  },
-];
-
-const statusVariant: { [key in RecommendationStatus]: "default" | "secondary" | "outline" | "destructive" } = {
-  "Sugerida": "outline",
-  "Aprobada": "secondary",
-  "En Ejecución": "default",
-  "Implementada": "default", // Would be nice with a success variant
-  "Rechazada": "destructive",
-};
-
-const statusColor: { [key in RecommendationStatus]: string } = {
-  "Sugerida": "",
-  "Aprobada": "text-blue-600",
-  "En Ejecución": "text-yellow-600",
-  "Implementada": "text-green-600",
-  "Rechazada": "",
-}
-
+import { getRecommendations, updateRecommendationStatus, type Recommendation, type RecommendationStatus } from "@/services/recommendations";
+import { useToast } from "@/hooks/use-toast";
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Loader2 } from "lucide-react";
 
 export default function TrackingPage() {
-  const [recommendations, setRecommendations] = useState<Recommendation[]>(initialRecommendations);
+  const { toast } = useToast();
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleStatusChange = (id: string, newStatus: RecommendationStatus) => {
+  const fetchRecs = useCallback(async () => {
+    setIsLoading(true);
+    try {
+        const data = await getRecommendations();
+        setRecommendations(data);
+    } catch (error) {
+        console.error("Failed to fetch recommendations", error);
+        toast({
+            variant: "destructive",
+            title: "Error al cargar",
+            description: "No se pudieron cargar las recomendaciones desde la base de datos."
+        });
+    } finally {
+        setIsLoading(false);
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    fetchRecs();
+  }, [fetchRecs]);
+
+
+  const handleStatusChange = async (id: string, newStatus: RecommendationStatus) => {
+    // Optimistically update UI
     setRecommendations(prev =>
       prev.map(rec => (rec.id === id ? { ...rec, status: newStatus } : rec))
     );
+
+    try {
+        await updateRecommendationStatus(id, newStatus);
+        toast({
+            title: "Estado Actualizado",
+            description: `La recomendación ha sido actualizada a "${newStatus}".`
+        });
+    } catch (error) {
+        console.error("Failed to update status", error);
+        toast({
+            variant: "destructive",
+            title: "Error al Actualizar",
+            description: "No se pudo guardar el nuevo estado. Revirtiendo cambio."
+        });
+        // Revert UI on failure
+        fetchRecs(); 
+    }
   };
 
   return (
@@ -109,7 +84,7 @@ export default function TrackingPage() {
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Todas las Recomendaciones</CardTitle>
-          <CardDescription>Una lista de todas las sugerencias de intervención y puestos de control.</CardDescription>
+          <CardDescription>Una lista de todas las sugerencias de intervención y puestos de control guardadas en el sistema.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -122,34 +97,48 @@ export default function TrackingPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {recommendations.map((rec) => (
-                <TableRow key={rec.id}>
-                  <TableCell>
-                    <p className="font-medium">{rec.description}</p>
-                    <p className="text-sm text-muted-foreground">{rec.location}</p>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={rec.type === 'Intervención Vial' ? 'secondary' : 'outline'}>{rec.type}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {rec.dateSuggested.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Select value={rec.status} onValueChange={(value: RecommendationStatus) => handleStatusChange(rec.id, value)}>
-                      <SelectTrigger className="w-40 ml-auto">
-                        <SelectValue placeholder="Cambiar estado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Sugerida">Sugerida</SelectItem>
-                        <SelectItem value="Aprobada">Aprobada</SelectItem>
-                        <SelectItem value="En Ejecución">En Ejecución</SelectItem>
-                        <SelectItem value="Implementada">Implementada</SelectItem>
-                        <SelectItem value="Rechazada">Rechazada</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center">
+                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                    </TableCell>
+                  </TableRow>
+              ) : recommendations.length === 0 ? (
+                 <TableRow>
+                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                        No hay recomendaciones guardadas. Genere algunas desde las páginas de "Sugerencias" o "Puestos de Control".
+                    </TableCell>
+                  </TableRow>
+              ) : (
+                recommendations.map((rec) => (
+                    <TableRow key={rec.id}>
+                    <TableCell>
+                        <p className="font-medium">{rec.description}</p>
+                        <p className="text-sm text-muted-foreground">{rec.location}</p>
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant={rec.type === 'Intervención Vial' ? 'secondary' : 'outline'}>{rec.type}</Badge>
+                    </TableCell>
+                    <TableCell>
+                        {format(new Date(rec.createdAt), 'dd \'de\' LLLL, yyyy', { locale: es })}
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <Select value={rec.status} onValueChange={(value: RecommendationStatus) => handleStatusChange(rec.id, value)}>
+                        <SelectTrigger className="w-40 ml-auto">
+                            <SelectValue placeholder="Cambiar estado" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Sugerida">Sugerida</SelectItem>
+                            <SelectItem value="Aprobada">Aprobada</SelectItem>
+                            <SelectItem value="En Ejecución">En Ejecución</SelectItem>
+                            <SelectItem value="Implementada">Implementada</SelectItem>
+                            <SelectItem value="Rechazada">Rechazada</SelectItem>
+                        </SelectContent>
+                        </Select>
+                    </TableCell>
+                    </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -157,4 +146,3 @@ export default function TrackingPage() {
     </>
   );
 }
-

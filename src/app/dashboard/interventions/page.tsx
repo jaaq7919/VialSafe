@@ -13,6 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { dbscan } from "@/lib/dbscan";
 import { format, min, max } from 'date-fns';
 import { analyzeCriticalZones } from '@/ai/flows/analyze-critical-zones';
+import { addRecommendation } from "@/services/recommendations";
 
 const interventionIcons: { [key: string]: React.ElementType } = {
     'semáforo': TrafficSignal,
@@ -23,8 +24,8 @@ const interventionIcons: { [key: string]: React.ElementType } = {
     'default': Lightbulb
 };
 
-const getIconForIntervention = (intervention: string): React.ElementType => {
-    if (typeof intervention !== 'string' || !intervention) {
+const getIconForIntervention = (intervention?: string): React.ElementType => {
+    if (!intervention || typeof intervention !== 'string') {
         return interventionIcons['default'];
     }
     
@@ -137,10 +138,26 @@ export default function InterventionsPage() {
             });
             setProgressMessage("Paso 4: Completado. Sugerencias generadas.");
 
-            // Step 5: Present results
-             setProgressMessage("Paso 5: Presentando resultados...");
+            // Step 5: Save and present results
+            setProgressMessage("Paso 5: Guardando y presentando resultados...");
             if (result && result.recommendations && result.recommendations.length > 0) {
-                setRecommendations(result.recommendations);
+                const validRecommendations = result.recommendations.filter(rec => rec && rec.intervention);
+                setRecommendations(validRecommendations);
+
+                // Save each recommendation to Firestore
+                for (const rec of validRecommendations) {
+                    await addRecommendation({
+                        type: 'Intervención Vial',
+                        description: rec.intervention,
+                        location: rec.location,
+                        justification: rec.justification,
+                    });
+                }
+                 toast({
+                    title: "Sugerencias Guardadas",
+                    description: `${validRecommendations.length} nuevas sugerencias han sido guardadas y están disponibles en la sección de Seguimiento.`,
+                });
+
             } else {
                 setError("Fallo en Paso 4: La IA no generó ninguna recomendación. Puede que los datos actuales no sugieran patrones claros para intervenciones viales.");
             }
@@ -166,7 +183,7 @@ export default function InterventionsPage() {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Sugerencias de Intervención Vial</h1>
                     <p className="text-muted-foreground mt-1">
-                        Genere recomendaciones viales basadas en datos y análisis de IA.
+                        Genere y guarde recomendaciones viales basadas en datos y análisis de IA.
                     </p>
                 </div>
                  <Button onClick={handleGenerate} disabled={isLoading}>
@@ -197,7 +214,7 @@ export default function InterventionsPage() {
                 {recommendations && recommendations.length > 0 && (
                     <Carousel className="w-full">
                         <CarouselContent className="-ml-4">
-                            {recommendations.filter(rec => rec && rec.intervention).map((rec, index) => {
+                            {recommendations.map((rec, index) => {
                                 const Icon = getIconForIntervention(rec.intervention);
                                 return (
                                     <CarouselItem key={index} className="pl-4 md:basis-1/2 lg:basis-1/3">
