@@ -4,6 +4,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { Loader2, Lightbulb, TrafficCone, OctagonAlert, TrafficSignal, ShieldAlert, CarCrash } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { suggestRoadInterventions, type SuggestRoadInterventionsOutput } from '@/ai/flows/suggest-road-interventions';
@@ -195,27 +196,35 @@ export default function InterventionsPage() {
                 )}
 
                 {recommendations && recommendations.length > 0 ? (
-                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        {recommendations.map((rec, index) => {
-                            const Icon = getIconForIntervention(rec.intervention);
-                            return (
-                                <Card key={index}>
-                                    <CardHeader className="flex flex-row items-center gap-4 space-y-0">
-                                         <div className="bg-primary/10 p-3 rounded-full">
-                                          <Icon className="w-6 h-6 text-primary" />
+                    <Carousel className="w-full">
+                        <CarouselContent className="-ml-4">
+                            {recommendations.filter(rec => rec && rec.intervention).map((rec, index) => {
+                                const Icon = getIconForIntervention(rec.intervention);
+                                return (
+                                    <CarouselItem key={index} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                                        <div className="p-1">
+                                            <Card>
+                                                <CardHeader className="flex flex-row items-center gap-4 space-y-0">
+                                                    <div className="bg-primary/10 p-3 rounded-full">
+                                                      <Icon className="w-6 h-6 text-primary" />
+                                                    </div>
+                                                    <div>
+                                                        <CardTitle>{rec.intervention}</CardTitle>
+                                                        <CardDescription>{rec.location}</CardDescription>
+                                                    </div>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <p className="text-sm text-muted-foreground">{rec.justification}</p>
+                                                </CardContent>
+                                            </Card>
                                         </div>
-                                        <div>
-                                            <CardTitle>{rec.intervention}</CardTitle>
-                                            <CardDescription>{rec.location}</CardDescription>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <p className="text-sm text-muted-foreground">{rec.justification}</p>
-                                    </CardContent>
-                                </Card>
-                            )
-                        })}
-                    </div>
+                                    </CarouselItem>
+                                )
+                            })}
+                        </CarouselContent>
+                        <CarouselPrevious className="hidden sm:flex" />
+                        <CarouselNext className="hidden sm:flex" />
+                    </Carousel>
                 ) : !isLoading && !error && (
                     <Card>
                         <CardContent className="p-8 text-center text-muted-foreground">
