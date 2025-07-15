@@ -17,7 +17,8 @@ import { getRecommendations, updateRecommendationStatus, type Recommendation, ty
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Loader2 } from "lucide-react";
+import { Loader2, Download } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function TrackingPage() {
   const { toast } = useToast();
@@ -70,6 +71,36 @@ export default function TrackingPage() {
     }
   };
 
+  const handleExportTracking = () => {
+    if (recommendations.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No hay datos para exportar",
+      });
+      return;
+    }
+
+    const headers = ["Tipo", "Descripcion", "Ubicacion", "Justificacion", "Estado", "Fecha Sugerida"];
+    const rows = recommendations.map(rec => [
+      `"${rec.type}"`,
+      `"${rec.description.replace(/"/g, '""')}"`,
+      `"${rec.location.replace(/"/g, '""')}"`,
+      `"${rec.justification.replace(/"/g, '""')}"`,
+      `"${rec.status}"`,
+      `"${format(new Date(rec.createdAt), 'yyyy-MM-dd')}"`
+    ]);
+
+    let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `seguimiento_medidas_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <>
       <div className="flex items-center justify-between">
@@ -79,6 +110,10 @@ export default function TrackingPage() {
             Gestione el ciclo de vida y el estado de las recomendaciones generadas.
           </p>
         </div>
+        <Button variant="outline" onClick={handleExportTracking} disabled={recommendations.length === 0}>
+          <Download className="mr-2 h-4 w-4" />
+          Descargar CSV
+        </Button>
       </div>
 
       <Card className="mt-6">
@@ -87,60 +122,62 @@ export default function TrackingPage() {
           <CardDescription>Una lista de todas las sugerencias de intervención y puestos de control guardadas en el sistema.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Descripción de la Medida</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Fecha Sugerida</TableHead>
-                <TableHead className="text-right">Estado</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
-                        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-                    </TableCell>
-                  </TableRow>
-              ) : recommendations.length === 0 ? (
-                 <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
-                        No hay recomendaciones guardadas. Genere algunas desde las páginas de "Sugerencias" o "Puestos de Control".
-                    </TableCell>
-                  </TableRow>
-              ) : (
-                recommendations.map((rec) => (
-                    <TableRow key={rec.id}>
-                    <TableCell>
-                        <p className="font-medium">{rec.description}</p>
-                        <p className="text-sm text-muted-foreground">{rec.location}</p>
-                    </TableCell>
-                    <TableCell>
-                        <Badge variant={rec.type === 'Intervención Vial' ? 'secondary' : 'outline'}>{rec.type}</Badge>
-                    </TableCell>
-                    <TableCell>
-                        {format(new Date(rec.createdAt), 'dd \'de\' LLLL, yyyy', { locale: es })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                        <Select value={rec.status} onValueChange={(value: RecommendationStatus) => handleStatusChange(rec.id, value)}>
-                        <SelectTrigger className="w-40 ml-auto">
-                            <SelectValue placeholder="Cambiar estado" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Sugerida">Sugerida</SelectItem>
-                            <SelectItem value="Aprobada">Aprobada</SelectItem>
-                            <SelectItem value="En Ejecución">En Ejecución</SelectItem>
-                            <SelectItem value="Implementada">Implementada</SelectItem>
-                            <SelectItem value="Rechazada">Rechazada</SelectItem>
-                        </SelectContent>
-                        </Select>
-                    </TableCell>
+          <div className="border rounded-md">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Descripción de la Medida</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Fecha Sugerida</TableHead>
+                  <TableHead className="text-right">Estado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-24 text-center">
+                          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                      </TableCell>
                     </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : recommendations.length === 0 ? (
+                  <TableRow>
+                      <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+                          No hay recomendaciones guardadas. Genere algunas desde las páginas de "Sugerencias" o "Puestos de Control".
+                      </TableCell>
+                    </TableRow>
+                ) : (
+                  recommendations.map((rec) => (
+                      <TableRow key={rec.id}>
+                      <TableCell>
+                          <p className="font-medium">{rec.description}</p>
+                          <p className="text-sm text-muted-foreground">{rec.location}</p>
+                      </TableCell>
+                      <TableCell>
+                          <Badge variant={rec.type === 'Intervención Vial' ? 'secondary' : 'outline'}>{rec.type}</Badge>
+                      </TableCell>
+                      <TableCell>
+                          {format(new Date(rec.createdAt), 'dd \'de\' LLLL, yyyy', { locale: es })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                          <Select value={rec.status} onValueChange={(value: RecommendationStatus) => handleStatusChange(rec.id, value)}>
+                          <SelectTrigger className="w-40 ml-auto">
+                              <SelectValue placeholder="Cambiar estado" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="Sugerida">Sugerida</SelectItem>
+                              <SelectItem value="Aprobada">Aprobada</SelectItem>
+                              <SelectItem value="En Ejecución">En Ejecución</SelectItem>
+                              <SelectItem value="Implementada">Implementada</SelectItem>
+                              <SelectItem value="Rechazada">Rechazada</SelectItem>
+                          </SelectContent>
+                          </Select>
+                      </TableCell>
+                      </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </>

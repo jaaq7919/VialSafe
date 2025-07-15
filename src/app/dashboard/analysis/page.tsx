@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, FilterX, Lightbulb, Loader2, OctagonAlert, FileText, Map } from "lucide-react";
+import { Calendar as CalendarIcon, FilterX, Lightbulb, Loader2, OctagonAlert, FileText, Map, Download } from "lucide-react";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { getSettings, type SettingItem } from '@/services/settings';
@@ -95,7 +95,44 @@ export default function AnalysisPage() {
         } finally {
             setIsLoading(false);
         }
-    }
+    };
+
+    const handleExportAnalysis = () => {
+        if (!analysisResult || analysisResult.criticalZones.length === 0) {
+            toast({
+                variant: "destructive",
+                title: "No hay datos para exportar",
+            });
+            return;
+        }
+
+        const headers = ["Ubicacion", "Cantidad de Accidentes", "Razon", "Periodo", "Resumen de Causas", "Fechas de Accidentes"];
+        
+        const rows = analysisResult.criticalZones.map(zone => [
+            `"${zone.location}"`,
+            zone.accidentCount,
+            `"${zone.reason.replace(/"/g, '""')}"`,
+            `"${zone.period}"`,
+            `"${zone.causeSummary}"`,
+            `"${zone.accidentDatesSummary}"`
+        ]);
+
+        let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `analisis_zonas_criticas_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        toast({
+            title: "Exportación exitosa",
+            description: "El reporte de análisis ha sido descargado."
+        });
+    };
+
 
     return (
         <>
@@ -241,11 +278,18 @@ export default function AnalysisPage() {
                                 <h2 className="text-2xl font-bold tracking-tight">Resultados del Análisis: {analysisResult.criticalZones.length} Zonas Críticas Identificadas</h2>
                                 
                                 <Card>
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <FileText className="w-5 h-5" />
-                                            Resumen General del Análisis
-                                        </CardTitle>
+                                    <CardHeader className="flex flex-row items-center justify-between">
+                                        <div className="space-y-1.5">
+                                            <CardTitle className="flex items-center gap-2">
+                                                <FileText className="w-5 h-5" />
+                                                Resumen General del Análisis
+                                            </CardTitle>
+                                            <CardDescription>Conclusiones y recomendaciones de la IA.</CardDescription>
+                                        </div>
+                                        <Button variant="outline" size="sm" onClick={handleExportAnalysis}>
+                                            <Download className="mr-2 h-4 w-4" />
+                                            Exportar Resultados
+                                        </Button>
                                     </CardHeader>
                                     <CardContent>
                                         <p className="text-sm text-muted-foreground">{analysisResult.summary}</p>
