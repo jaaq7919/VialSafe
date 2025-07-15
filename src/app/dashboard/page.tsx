@@ -9,7 +9,7 @@ import { getAccidents, type Accident } from "@/services/accidents";
 import { getRecommendations, type Recommendation } from "@/services/recommendations";
 import { getSettings, type AppSettings } from "@/services/settings";
 import { dbscan } from "@/lib/dbscan";
-import { format }s from "date-fns";
+import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import type { DateRange } from "react-day-picker";
@@ -288,5 +288,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    
