@@ -15,6 +15,7 @@ import { analyzeCriticalZones } from '@/ai/flows/analyze-critical-zones';
 import { suggestRoadInterventions } from '@/ai/flows/suggest-road-interventions';
 import { suggestControlPosts } from '@/ai/flows/suggest-control-posts';
 import { generateExecutiveSummary } from '@/ai/flows/generate-executive-summary';
+import ReactMarkdown from 'react-markdown';
 
 export default function SummaryPage() {
     const { toast } = useToast();
@@ -182,11 +183,9 @@ export default function SummaryPage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="prose prose-sm dark:prose-invert max-w-none p-4 bg-muted/50 rounded-md border">
-                                {summary.split('\\n\\n').map((paragraph, index) => (
-                                    <p key={index}>{paragraph.replace(/\\n/g, ' ')}</p>
-                                ))}
-                            </div>
+                             <article className="prose dark:prose-invert max-w-none p-4 bg-muted/50 rounded-md border">
+                                <ReactMarkdown>{summary}</ReactMarkdown>
+                             </article>
                         </CardContent>
                     </Card>
                 )} 
