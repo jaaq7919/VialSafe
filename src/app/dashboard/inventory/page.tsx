@@ -25,6 +25,12 @@ import {
   DialogClose
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -40,7 +46,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { MoreHorizontal, PlusCircle, Trash2, FilePenLine, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getInventoryItems, addInventoryItem, updateInventoryItem, deleteInventoryItem, type InventoryItem, itemTypes, itemStatuses, statusColors } from "@/services/inventory";
+import { getInventoryItems, addInventoryItem, updateInventoryItem, deleteInventoryItem } from "@/services/inventory";
+import { type InventoryItem, itemTypes, itemStatuses, statusColors, inventoryItemSchema } from "@/types/inventory";
 import dynamic from "next/dynamic";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -49,15 +56,7 @@ const LocationPicker = dynamic(() => import('@/components/client/location-picker
     loading: () => <div className="h-[200px] w-full rounded-md bg-muted flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
 });
 
-const formSchema = z.object({
-  type: z.string({ required_error: "Debe seleccionar un tipo de elemento." }),
-  subtype: z.string().min(3, "El subtipo/nombre debe tener al menos 3 caracteres."),
-  status: z.string({ required_error: "Debe seleccionar un estado." }),
-  latitude: z.number(),
-  longitude: z.number(),
-  locationDescription: z.string().optional(),
-  notes: z.string().optional(),
-}).refine(data => data.latitude !== undefined && data.longitude !== undefined, {
+const formSchema = inventoryItemSchema.refine(data => data.latitude !== undefined && data.longitude !== undefined, {
     message: "Debe seleccionar una ubicación en el mapa.",
     path: ["subtype"], // Attach error to a visible field
 });
@@ -402,5 +401,3 @@ export default function InventoryPage() {
     </>
   );
 }
-
-    
