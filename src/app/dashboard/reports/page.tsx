@@ -43,7 +43,7 @@ export default function ReportsPage() {
     const [accidents, setAccidents] = useState<Accident[]>([]);
 
     const [locationFilter, setLocationFilter] = useState("");
-    const [causeFilter, setCauseFilter] = useState("");
+    const [causeFilter, setCauseFilter] = useState("all");
     const [dateFilter, setDateFilter] = useState<DateRange | undefined>();
     
     const [currentPage, setCurrentPage] = useState(1);
@@ -95,11 +95,16 @@ export default function ReportsPage() {
         }
     }, [toast]);
     
+    useEffect(() => {
+        fetchAccidents();
+        fetchSettings();
+    }, [fetchAccidents, fetchSettings]);
+
     const handleEdit = (accidentId: string) => {
         router.push(`/dashboard/accidents?edit=${accidentId}`);
     };
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = useCallback(async (id: string) => {
         try {
             await deleteAccident(id);
             toast({
@@ -115,7 +120,7 @@ export default function ReportsPage() {
                 description: "No se pudo eliminar el reporte.",
             });
         }
-    };
+    }, [toast, fetchAccidents]);
 
     const handleViewDetails = (accident: Accident) => {
         setSelectedAccident(accident);
@@ -124,7 +129,7 @@ export default function ReportsPage() {
     
     const handleClearFilters = () => {
         setLocationFilter("");
-        setCauseFilter("");
+        setCauseFilter("all");
         setDateFilter(undefined);
     };
     
@@ -133,16 +138,17 @@ export default function ReportsPage() {
         setIsDeleteDialogOpen(true);
     };
 
-    const handleDeleteConfirm = () => {
+    const handleDeleteConfirm = useCallback(() => {
         if (accidentIdToDelete) {
             handleDelete(accidentIdToDelete);
         }
         setIsDeleteDialogOpen(false);
         setAccidentIdToDelete(null);
-    };
+    }, [accidentIdToDelete, handleDelete]);
     
-    const handleDownloadCsv = () => {
-        if (filteredAccidents.length === 0) {
+    const handleDownloadCsv = useCallback(() => {
+        const accidentsToExport = filteredAccidents;
+        if (accidentsToExport.length === 0) {
             toast({
                 variant: "destructive",
                 title: "No hay datos",
@@ -153,9 +159,9 @@ export default function ReportsPage() {
 
         let csvContent = "data:text/csv;charset=utf-8,";
         const headers = ["Ubicacion", "Fecha", "Hora", "Tipo", "Causa", "Estado del Cruce", "Observaciones", "Latitud", "Longitud"];
-        csvContent += headers.join(",") + "\\n"; 
+        csvContent += headers.join(",") + "\n"; 
 
-        filteredAccidents.forEach(row => {
+        accidentsToExport.forEach(row => {
             const rowArray = [
                 `"${row.addressPrefix} ${row.address}"`,
                 `"${format(new Date(row.dateTime), 'yyyy-MM-dd')}"`,
@@ -167,7 +173,7 @@ export default function ReportsPage() {
                 `"${row.latitude}"`,
                 `"${row.longitude}"`,
             ];
-            csvContent += rowArray.join(",") + "\\n";
+            csvContent += rowArray.join(",") + "\n";
         });
         
         const encodedUri = encodeURI(csvContent);
@@ -182,15 +188,9 @@ export default function ReportsPage() {
             title: "Reporte Descargado",
             description: "El archivo CSV ha sido generado exitosamente.",
         });
-    };
+    }, [toast, causeLabels, typeLabels]);
 
-    useEffect(() => {
-        fetchAccidents();
-        fetchSettings();
-    }, [fetchAccidents, fetchSettings]);
-    
     const filteredAccidents = useMemo(() => {
-        setCurrentPage(1); // Reset page to 1 on filter change
         return accidents.filter(accident => {
             if (!accident.dateTime) return false;
             const accidentDate = new Date(accident.dateTime);
@@ -199,13 +199,22 @@ export default function ReportsPage() {
 
             const fullLocation = `${accident.addressPrefix} ${accident.address}`;
 
-            const dateMatch = !from || (accidentDate >= from && (!to || accidentDate <= to));
+            if (from && to) {
+                if (accidentDate < from || accidentDate > to) return false;
+            } else if (from) {
+                if(accidentDate < from) return false;
+            } else if (to) {
+                if(accidentDate > to) return false;
+            }
+            
             const locationMatch = !locationFilter || fullLocation.toLowerCase().includes(locationFilter.toLowerCase());
-            const causeMatch = !causeFilter || accident.cause === causeFilter;
+            const causeMatch = !causeFilter || causeFilter === 'all' || accident.cause === causeFilter;
 
-            return dateMatch && locationMatch && causeMatch;
+            return locationMatch && causeMatch;
         });
     }, [accidents, locationFilter, causeFilter, dateFilter]);
+
+    const totalPages = useMemo(() => Math.ceil(filteredAccidents.length / rowsPerPage), [filteredAccidents.length, rowsPerPage]);
 
     const paginatedAccidents = useMemo(() => {
         const startIndex = (currentPage - 1) * rowsPerPage;
@@ -213,6 +222,9 @@ export default function ReportsPage() {
         return filteredAccidents.slice(startIndex, endIndex);
     }, [filteredAccidents, currentPage, rowsPerPage]);
 
+    useEffect(() => {
+        setCurrentPage(1); // Reset page to 1 on filter change
+    }, [filteredAccidents]);
     
     return (
         <>
@@ -290,6 +302,7 @@ export default function ReportsPage() {
                                 <SelectValue placeholder="Filtrar por causa" />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="all">Todas las causas</SelectItem>
                                 {causeOptions.map((option) => (
                                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                 ))}
@@ -388,7 +401,7 @@ export default function ReportsPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                disabled={currentPage === 1}
+                                disabled={currentPage === 1 || totalPages === 0}
                             >
                                 Anterior
                             </Button>
@@ -396,7 +409,7 @@ export default function ReportsPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                disabled={currentPage === totalPages}
+                                disabled={currentPage === totalPages || totalPages === 0}
                             >
                                 Siguiente
                             </Button>
@@ -415,7 +428,7 @@ export default function ReportsPage() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => setAccidentIdToDelete(null)}>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteConfirm}>Eliminar</AlertDialogAction>
+                        <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -482,3 +495,5 @@ export default function ReportsPage() {
         </>
     );
 }
+
+    
