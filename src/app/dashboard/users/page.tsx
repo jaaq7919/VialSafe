@@ -50,8 +50,8 @@ import { MoreHorizontal, PlusCircle, Trash2, FilePenLine, Loader2 } from "lucide
 import { useToast } from "@/hooks/use-toast";
 import { getUsers, addUser, updateUser, deleteUser, type UserProfile } from "@/services/users";
 
-
-const userFormSchema = z.object({
+// Base schema without refinements
+const baseUserSchema = z.object({
   firstName: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
   lastName: z.string().min(2, "El apellido debe tener al menos 2 caracteres."),
   documentNumber: z.string().min(5, "El número de documento es muy corto."),
@@ -59,9 +59,16 @@ const userFormSchema = z.object({
   phone: z.string().min(7, "El número de celular no es válido."),
   role: z.enum(["Administrador", "Analista de Tráfico", "Operador de Tráfico"], { required_error: "Debe seleccionar un rol." }),
   password: z.string().optional(),
-}).refine(data => {
-    // La contraseña es requerida solo si no estamos editando un usuario.
-    // O si estamos editando y se ha proporcionado una nueva contraseña.
+});
+
+// Extended schema to include optional id for editing
+const userSchemaWithId = baseUserSchema.extend({
+  id: z.string().optional(),
+});
+
+// Final schema with refinements for form validation
+const userFormSchema = userSchemaWithId.refine(data => {
+    // Password is required only if we are creating a new user (no id)
     if (!data.id && (!data.password || data.password.length < 6)) {
       return false;
     }
@@ -70,6 +77,7 @@ const userFormSchema = z.object({
     message: "La contraseña es obligatoria y debe tener al menos 6 caracteres.",
     path: ["password"],
 }).refine(data => {
+    // If we are editing and a new password is provided, it must be long enough
     if (data.id && data.password && data.password.length > 0 && data.password.length < 6) {
         return false;
     }
@@ -77,10 +85,6 @@ const userFormSchema = z.object({
 }, {
     message: "La nueva contraseña debe tener al menos 6 caracteres.",
     path: ["password"],
-});
-
-const userSchema = userFormSchema.extend({
-  id: z.string().optional(),
 });
 
 
@@ -102,8 +106,8 @@ export default function UsersPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
-  const form = useForm<z.infer<typeof userSchema>>({
-    resolver: zodResolver(userSchema),
+  const form = useForm<z.infer<typeof userFormSchema>>({
+    resolver: zodResolver(userFormSchema),
     defaultValues: {
       firstName: "",
       lastName: "",
@@ -169,7 +173,7 @@ export default function UsersPage() {
         toast({
             variant: "destructive",
             title: "Error al eliminar",
-            description: "No se pudo eliminar el perfil del usuario. Es posible que deba eliminar la cuenta de autenticación manualmente."
+            description: "No se pudo eliminar el perfil del usuario. Es posible que deba eliminar la cuenta de autenticación manually."
         });
       }
     }
@@ -177,7 +181,7 @@ export default function UsersPage() {
     setUserToDelete(null);
   };
   
-  async function onSubmit(values: z.infer<typeof userSchema>) {
+  async function onSubmit(values: z.infer<typeof userFormSchema>) {
     setIsSubmitting(true);
     try {
       if (editingUser) {
@@ -191,7 +195,7 @@ export default function UsersPage() {
           description: `Los datos de ${values.firstName} ${values.lastName} han sido actualizados.`,
         });
       } else {
-        await addUser(values);
+        await addUser(values as any);
         toast({
           title: "Usuario Creado",
           description: `El perfil para ${values.firstName} ha sido creado exitosamente.`,
@@ -437,4 +441,3 @@ export default function UsersPage() {
     </>
   );
 }
-
