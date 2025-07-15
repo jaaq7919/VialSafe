@@ -1,8 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DashboardCharts } from "@/components/client/dashboard-charts";
-import { Eye, MapPin, Wrench, Siren } from "lucide-react";
+import { Eye, MapPin, Wrench, Siren, CheckCircle } from "lucide-react";
 import { getAccidents, type Accident } from "@/services/accidents";
+import { getRecommendations } from "@/services/recommendations";
 import { getSettings } from "@/services/settings";
+import { dbscan } from "@/lib/dbscan";
 
 // Helper function to process data for charts
 const processChartData = (accidents: Accident[], causeLabels: { [key: string]: string }) => {
@@ -35,17 +37,38 @@ const processChartData = (accidents: Accident[], causeLabels: { [key: string]: s
 
 
 export default async function DashboardPage() {
-  const accidents = await getAccidents();
-  const settings = await getSettings();
+  const [accidents, recommendations, settings] = await Promise.all([
+    getAccidents(),
+    getRecommendations(),
+    getSettings()
+  ]);
+  
   const causeLabels = Object.fromEntries((settings?.accidentCauses || []).map(c => [c.value, c.label]));
 
   const { accidentsByMonthData, accidentsByCauseData } = processChartData(accidents, causeLabels);
 
+  // Calculate critical zones from accidents
+  let criticalZonesCount = 0;
+  if (accidents.length >= 2) {
+    const points = accidents.map(acc => [acc.latitude, acc.longitude] as [number, number]);
+    const clusterAssignments = dbscan(points, 0.0005, 2); 
+    const uniqueClusters = new Set(clusterAssignments.filter(c => c !== -1));
+    criticalZonesCount = uniqueClusters.size;
+  }
+  
+  // Calculate pending interventions
+  const pendingInterventionsCount = recommendations.filter(rec => 
+    rec.status === 'Sugerida' || rec.status === 'Aprobada' || rec.status === 'En Ejecución'
+  ).length;
+
+  // Calculate implemented measures
+  const implementedMeasuresCount = recommendations.filter(rec => rec.status === 'Implementada').length;
+
   const stats = [
     { title: "Total Accidentes Registrados", value: accidents.length.toString(), icon: Siren, change: "Datos en tiempo real" },
-    { title: "Zonas Críticas (Simulado)", value: "4", icon: MapPin, change: "+1 esta semana" },
-    { title: "Intervenciones Pendientes", value: "15", icon: Wrench, change: "3 esperando aprobación" },
-    { title: "Reportes Activos", value: "28", icon: Eye, change: "Actualizado hace 2 horas" },
+    { title: "Zonas Críticas Identificadas", value: criticalZonesCount.toString(), icon: MapPin, change: "Basado en análisis DBSCAN" },
+    { title: "Intervenciones Pendientes", value: pendingInterventionsCount.toString(), icon: Wrench, change: "Sugeridas, aprobadas o en ejecución" },
+    { title: "Medidas Implementadas", value: implementedMeasuresCount.toString(), icon: CheckCircle, change: "Recomendaciones completadas" },
   ];
 
   return (
