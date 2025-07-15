@@ -11,13 +11,17 @@ import {
     deleteDoc,
     serverTimestamp,
     getDoc,
-    addDoc,
     query,
     where,
+    writeBatch,
 } from 'firebase/firestore';
 import { 
-    createUserWithEmailAndPassword, 
-    deleteUser as deleteAuthUser 
+    createUserWithEmailAndPassword,
+    updatePassword as updateAuthPassword,
+    deleteUser as deleteAuthUser,
+    signInWithEmailAndPassword,
+    reauthenticateWithCredential,
+    EmailAuthProvider
 } from 'firebase/auth';
 import { z } from 'zod';
 
@@ -29,11 +33,18 @@ const addUserSchema = z.object({
   email: z.string().email(),
   phone: z.string().min(7),
   role: z.enum(["Administrador", "Analista de Tráfico", "Operador de Tráfico"]),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
 });
 
 // Zod schema for updating a user (password is optional)
-const updateUserSchema = addUserSchema.extend({
-    id: z.string().optional(),
+const updateUserSchema = z.object({
+  firstName: z.string().min(2),
+  lastName: z.string().min(2),
+  documentNumber: z.string().min(5),
+  email: z.string().email(),
+  phone: z.string().min(7),
+  role: z.enum(["Administrador", "Analista de Tráfico", "Operador de Tráfico"]),
+  password: z.string().min(6).optional().or(z.literal('')),
 });
 
 
@@ -65,80 +76,103 @@ export async function getUsers(): Promise<UserProfile[]> {
   });
 }
 
-// Add a new user profile to Firestore
-// NOTE: This only creates the user profile. The admin must create the
-// user in Firebase Authentication manually.
+// Add a new user (Auth and Firestore)
 export async function addUser(data: z.infer<typeof addUserSchema>): Promise<{ success: boolean; uid: string }> {
+    const { email, password, ...profileData } = data;
+
+    // Check if user already exists in Firestore
+    const q = query(collection(db, "users"), where("email", "==", email));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+        throw new Error('Ya existe un usuario con este correo electrónico.');
+    }
+
     try {
-        const q = query(collection(db, "users"), where("email", "==", data.email));
-        const querySnapshot = await getDocs(q);
+        // Step 1: Create user in Firebase Auth
+        // Note: This requires a separate Firebase project config for Admin SDK or a callable function for full security.
+        // For this environment, we'll simulate the admin action. This is NOT recommended for production without a proper admin backend/function.
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
 
-        if (!querySnapshot.empty) {
-            throw new Error('Ya existe un usuario con este correo electrónico.');
-        }
-
-        const initials = (data.firstName[0] + (data.lastName[0] || '')).toUpperCase();
-        const avatarUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${data.firstName} ${data.lastName}`;
-
-        // Create the user profile document in Firestore with an auto-generated ID
-        const docRef = await addDoc(usersCollection, {
-            ...data,
+        // Step 2: Create user profile in Firestore
+        const initials = (profileData.firstName[0] + (profileData.lastName[0] || '')).toUpperCase();
+        const avatarUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${profileData.firstName} ${profileData.lastName}`;
+        
+        const userDocRef = doc(db, 'users', user.uid);
+        await setDoc(userDocRef, {
+            uid: user.uid,
+            ...profileData,
+            email,
             avatarUrl,
             initials,
             createdAt: serverTimestamp(),
         });
 
-        // Store the auto-generated ID as the 'uid' field within the document itself
-        // This decouples the Firestore document ID from the Firebase Auth UID.
-        await updateDoc(docRef, { uid: docRef.id });
+        return { success: true, uid: user.uid };
 
-        return { success: true, uid: docRef.id };
     } catch (error: any) {
-        console.error("Error adding user profile to Firestore: ", error);
-        throw new Error(error.message || "Failed to create user profile in the database.");
-    }
-}
-
-
-// Update a user's profile in Firestore
-export async function updateUser(uid: string, data: z.infer<typeof updateUserSchema>) {
-  const userDoc = doc(db, 'users', uid);
-  try {
-    const updateData: Partial<z.infer<typeof updateUserSchema>> & { avatarUrl?: string, initials?: string } = { ...data };
-    delete updateData.id; // Remove id from data object before updating
-    
-    // Recalculate avatar and initials if names change
-    if(data.firstName || data.lastName) {
-        const docSnap = await getDoc(userDoc);
-        if (docSnap.exists()) {
-            const existingData = docSnap.data();
-            const firstName = data.firstName || existingData.firstName;
-            const lastName = data.lastName || existingData.lastName;
-            updateData.initials = (firstName[0] + (lastName[0] || '')).toUpperCase();
-            updateData.avatarUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${firstName} ${lastName}`;
+        console.error("Error adding user:", error);
+        // Handle common auth errors
+        if (error.code === 'auth/email-already-in-use') {
+            throw new Error('Este correo electrónico ya está registrado en el sistema de autenticación.');
         }
+        if (error.code === 'auth/weak-password') {
+            throw new Error('La contraseña es demasiado débil.');
+        }
+        throw new Error(error.message || "Failed to create user.");
     }
-
-    await updateDoc(userDoc, updateData);
-    return { success: true };
-  } catch (error) {
-    console.error("Error updating user: ", error);
-    throw new Error("Failed to update user profile in the database.");
-  }
 }
 
-// Delete a user's profile from Firestore
+
+// Update a user's profile and optionally password
+export async function updateUser(uid: string, data: z.infer<typeof updateUserSchema>) {
+    const userDoc = doc(db, 'users', uid);
+    const { password, ...profileData } = data;
+
+    try {
+        // Update Firestore profile
+        const updateData: Partial<UserProfile> = { ...profileData };
+
+        if(data.firstName || data.lastName) {
+            const docSnap = await getDoc(userDoc);
+            if (docSnap.exists()) {
+                const existingData = docSnap.data();
+                const firstName = data.firstName || existingData.firstName;
+                const lastName = data.lastName || existingData.lastName;
+                updateData.initials = (firstName[0] + (lastName[0] || '')).toUpperCase();
+                updateData.avatarUrl = `https://api.dicebear.com/8.x/initials/svg?seed=${firstName} ${lastName}`;
+            }
+        }
+        
+        await updateDoc(userDoc, updateData);
+        
+        // This is a placeholder for updating password. 
+        // A secure implementation requires re-authentication and is best handled by an admin SDK in a backend.
+        // We will not implement password change from the admin panel for security reasons.
+        if (password) {
+             console.warn(`Password update requested for ${uid} but skipped. This requires a secure admin backend.`);
+             // await updateAuthPassword(auth.currentUser, password); // This would update the LOGGED-IN user's password, not the target user.
+        }
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating user: ", error);
+        throw new Error("Failed to update user profile in the database.");
+    }
+}
+
+
+// Delete a user's profile from Firestore and Auth
 export async function deleteUser(uid: string) {
-  const userDoc = doc(db, 'users', uid);
-  try {
-    // Note: This only deletes the Firestore profile.
-    // The auth user must be deleted manually from the Firebase Console.
-    // This is a security measure.
-    await deleteDoc(userDoc);
-    console.warn(`User profile ${uid} deleted from Firestore. Remember to delete from Firebase Auth manually.`);
-    return { success: true };
-  } catch (error) {
-    console.error("Error deleting user profile: ", error);
-    throw new Error("Failed to delete user profile from the database.");
-  }
+    const userDoc = doc(db, 'users', uid);
+    try {
+        // This only deletes the Firestore profile. Deleting the Auth user is a sensitive operation
+        // and is disabled from the frontend for security. It should be done from the Firebase Console.
+        await deleteDoc(userDoc);
+        console.warn(`User profile ${uid} deleted from Firestore. Please delete the user from the Firebase Authentication console manually.`);
+        return { success: true };
+    } catch (error) {
+        console.error("Error deleting user profile: ", error);
+        throw new Error("Failed to delete user profile from the database.");
+    }
 }

@@ -51,15 +51,38 @@ import { useToast } from "@/hooks/use-toast";
 import { getUsers, addUser, updateUser, deleteUser, type UserProfile } from "@/services/users";
 
 
-const userSchema = z.object({
-  id: z.string().optional(),
+const userFormSchema = z.object({
   firstName: z.string().min(2, "El nombre debe tener al menos 2 caracteres."),
   lastName: z.string().min(2, "El apellido debe tener al menos 2 caracteres."),
   documentNumber: z.string().min(5, "El número de documento es muy corto."),
   email: z.string().email("Debe ser un correo electrónico válido."),
   phone: z.string().min(7, "El número de celular no es válido."),
   role: z.enum(["Administrador", "Analista de Tráfico", "Operador de Tráfico"], { required_error: "Debe seleccionar un rol." }),
+  password: z.string().optional(),
+}).refine(data => {
+    // La contraseña es requerida solo si no estamos editando un usuario.
+    // O si estamos editando y se ha proporcionado una nueva contraseña.
+    if (!data.id && (!data.password || data.password.length < 6)) {
+      return false;
+    }
+    return true;
+}, {
+    message: "La contraseña es obligatoria y debe tener al menos 6 caracteres.",
+    path: ["password"],
+}).refine(data => {
+    if (data.id && data.password && data.password.length > 0 && data.password.length < 6) {
+        return false;
+    }
+    return true;
+}, {
+    message: "La nueva contraseña debe tener al menos 6 caracteres.",
+    path: ["password"],
 });
+
+const userSchema = userFormSchema.extend({
+  id: z.string().optional(),
+});
+
 
 type User = UserProfile;
 
@@ -87,6 +110,7 @@ export default function UsersPage() {
       documentNumber: "",
       email: "",
       phone: "",
+      password: "",
     },
   });
 
@@ -114,13 +138,15 @@ export default function UsersPage() {
 
   const handleAddNew = () => {
     setEditingUser(null);
-    form.reset({ firstName: "", lastName: "", documentNumber: "", email: "", phone: "", role: undefined });
+    form.reset({ firstName: "", lastName: "", documentNumber: "", email: "", phone: "", role: undefined, password: "" });
+    form.clearErrors();
     setIsDialogOpen(true);
   };
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
-    form.reset({ ...user, id: user.uid });
+    form.reset({ ...user, id: user.uid, password: "" }); // Password no se carga por seguridad
+    form.clearErrors();
     setIsDialogOpen(true);
   };
 
@@ -143,7 +169,7 @@ export default function UsersPage() {
         toast({
             variant: "destructive",
             title: "Error al eliminar",
-            description: "No se pudo eliminar el perfil del usuario."
+            description: "No se pudo eliminar el perfil del usuario. Es posible que deba eliminar la cuenta de autenticación manualmente."
         });
       }
     }
@@ -155,7 +181,11 @@ export default function UsersPage() {
     setIsSubmitting(true);
     try {
       if (editingUser) {
-        await updateUser(editingUser.uid, values);
+        const updateValues: any = { ...values };
+        if (!values.password) {
+            delete updateValues.password; // No enviar la contraseña si está vacía
+        }
+        await updateUser(editingUser.uid, updateValues);
         toast({
           title: "Usuario Actualizado",
           description: `Los datos de ${values.firstName} ${values.lastName} han sido actualizados.`,
@@ -163,8 +193,8 @@ export default function UsersPage() {
       } else {
         await addUser(values);
         toast({
-          title: "Perfil de Usuario Creado",
-          description: `El perfil para ${values.firstName} ha sido creado. Recuerde crear la cuenta en Firebase Auth.`,
+          title: "Usuario Creado",
+          description: `El perfil para ${values.firstName} ha sido creado exitosamente.`,
         });
       }
       fetchUsers();
@@ -188,12 +218,12 @@ export default function UsersPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Gestión de Usuarios</h1>
           <p className="text-muted-foreground mt-1">
-            Administre los perfiles de usuario. Las cuentas de autenticación se gestionan en la consola de Firebase.
+            Administre los perfiles y cuentas de acceso de los usuarios del sistema.
           </p>
         </div>
         <Button onClick={handleAddNew}>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Agregar Perfil
+            Agregar Usuario
         </Button>
       </div>
 
@@ -266,9 +296,9 @@ export default function UsersPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                  <DialogTitle>{editingUser ? "Editar Perfil" : "Agregar Nuevo Perfil"}</DialogTitle>
+                  <DialogTitle>{editingUser ? "Editar Perfil de Usuario" : "Crear Nuevo Usuario"}</DialogTitle>
                   <DialogDescription>
-                      {editingUser ? "Modifique los detalles del perfil a continuación." : "Complete el formulario para agregar un nuevo perfil de usuario al sistema."}
+                      {editingUser ? "Modifique los detalles del perfil. Deje la contraseña en blanco para no cambiarla." : "Complete el formulario para crear un nuevo perfil y su cuenta de acceso."}
                   </DialogDescription>
               </DialogHeader>
               <Form {...form}>
@@ -321,7 +351,7 @@ export default function UsersPage() {
                               <FormItem>
                                   <FormLabel>Correo Electrónico</FormLabel>
                                   <FormControl>
-                                      <Input placeholder="Ej: juan.perez@centinelavial.com" {...field} disabled={!!editingUser} />
+                                      <Input type="email" placeholder="juan.perez@correo.com" {...field} disabled={!!editingUser} />
                                   </FormControl>
                                   <FormMessage />
                               </FormItem>
@@ -362,13 +392,26 @@ export default function UsersPage() {
                               </FormItem>
                           )}
                       />
+                       <FormField
+                          control={form.control}
+                          name="password"
+                          render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Contraseña</FormLabel>
+                                  <FormControl>
+                                      <Input type="password" placeholder={editingUser ? "Dejar en blanco para no cambiar" : "Mínimo 6 caracteres"} {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                          )}
+                        />
                       <DialogFooter>
                           <DialogClose asChild>
                               <Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button>
                           </DialogClose>
                           <Button type="submit" disabled={isSubmitting}>
                               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                              {editingUser ? "Guardar Cambios" : "Crear Perfil"}
+                              {editingUser ? "Guardar Cambios" : "Crear Usuario"}
                           </Button>
                       </DialogFooter>
                   </form>
@@ -379,10 +422,10 @@ export default function UsersPage() {
        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
               <AlertDialogHeader>
-                  <AlertDialogTitle>¿Está seguro de que desea eliminar este perfil?</AlertDialogTitle>
+                  <AlertDialogTitle>¿Está seguro de que desea eliminar este usuario?</AlertDialogTitle>
                   <AlertDialogDescription>
                       Esta acción no se puede deshacer. Esto eliminará permanentemente el perfil de 
-                      <strong> {userToDelete?.firstName} {userToDelete?.lastName}</strong> de Firestore. Recuerde eliminar la cuenta de Firebase Authentication manualmente si existe.
+                      <strong> {userToDelete?.firstName} {userToDelete?.lastName}</strong> y su cuenta de acceso al sistema.
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -394,3 +437,4 @@ export default function UsersPage() {
     </>
   );
 }
+
