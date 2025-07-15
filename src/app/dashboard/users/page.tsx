@@ -164,8 +164,8 @@ export default function UsersPage() {
       try {
         await deleteUser(userToDelete.uid);
         toast({
-          title: "Usuario Eliminado",
-          description: `El perfil de ${userToDelete.firstName} ${userToDelete.lastName} ha sido eliminado.`,
+          title: "Perfil de Usuario Eliminado",
+          description: `El perfil de ${userToDelete.firstName} ${userToDelete.lastName} ha sido eliminado de la base de datos.`,
         });
         fetchUsers();
       } catch (error) {
@@ -173,7 +173,7 @@ export default function UsersPage() {
         toast({
             variant: "destructive",
             title: "Error al eliminar",
-            description: "No se pudo eliminar el perfil del usuario. Es posible que deba eliminar la cuenta de autenticación manually."
+            description: "No se pudo eliminar el perfil del usuario."
         });
       }
     }
@@ -426,15 +426,17 @@ export default function UsersPage() {
        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
               <AlertDialogHeader>
-                  <AlertDialogTitle>¿Está seguro de que desea eliminar este usuario?</AlertDialogTitle>
+                  <AlertDialogTitle>¿Está seguro de que desea eliminar este perfil?</AlertDialogTitle>
                   <AlertDialogDescription>
-                      Esta acción no se puede deshacer. Esto eliminará permanentemente el perfil de 
-                      <strong> {userToDelete?.firstName} {userToDelete?.lastName}</strong> y su cuenta de acceso al sistema.
+                      Esta acción eliminará permanentemente el perfil de 
+                      <strong> {userToDelete?.firstName} {userToDelete?.lastName}</strong> de la base de datos de la aplicación.
+                      <br/><br/>
+                      <span className="font-semibold text-destructive">Importante:</span> Esta acción no elimina la cuenta de autenticación del usuario. Para revocar completamente el acceso, debe eliminar al usuario desde la consola de Firebase Authentication.
                   </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                   <AlertDialogCancel onClick={() => setUserToDelete(null)}>Cancelar</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleConfirmDelete}>Eliminar</AlertDialogAction>
+                  <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive hover:bg-destructive/90">Eliminar Perfil</AlertDialogAction>
               </AlertDialogFooter>
           </AlertDialogContent>
       </AlertDialog>

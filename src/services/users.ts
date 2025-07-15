@@ -13,15 +13,9 @@ import {
     getDoc,
     query,
     where,
-    writeBatch,
 } from 'firebase/firestore';
 import { 
     createUserWithEmailAndPassword,
-    updatePassword as updateAuthPassword,
-    deleteUser as deleteAuthUser,
-    signInWithEmailAndPassword,
-    reauthenticateWithCredential,
-    EmailAuthProvider
 } from 'firebase/auth';
 import { z } from 'zod';
 
@@ -89,8 +83,6 @@ export async function addUser(data: z.infer<typeof addUserSchema>): Promise<{ su
 
     try {
         // Step 1: Create user in Firebase Auth
-        // Note: This requires a separate Firebase project config for Admin SDK or a callable function for full security.
-        // For this environment, we'll simulate the admin action. This is NOT recommended for production without a proper admin backend/function.
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const user = userCredential.user;
 
@@ -146,12 +138,10 @@ export async function updateUser(uid: string, data: z.infer<typeof updateUserSch
         
         await updateDoc(userDoc, updateData);
         
-        // This is a placeholder for updating password. 
-        // A secure implementation requires re-authentication and is best handled by an admin SDK in a backend.
-        // We will not implement password change from the admin panel for security reasons.
+        // As a security best practice for client-side applications, we will not handle password updates for other users.
+        // This should be done through a secure, admin-only backend or by the user themselves.
         if (password) {
-             console.warn(`Password update requested for ${uid} but skipped. This requires a secure admin backend.`);
-             // await updateAuthPassword(auth.currentUser, password); // This would update the LOGGED-IN user's password, not the target user.
+             console.warn(`Password update requested for ${uid} but skipped for security reasons. Admin should use the Firebase console or an admin backend.`);
         }
 
         return { success: true };
@@ -162,14 +152,14 @@ export async function updateUser(uid: string, data: z.infer<typeof updateUserSch
 }
 
 
-// Delete a user's profile from Firestore and Auth
+// Delete a user's profile from Firestore.
 export async function deleteUser(uid: string) {
     const userDoc = doc(db, 'users', uid);
     try {
         // This only deletes the Firestore profile. Deleting the Auth user is a sensitive operation
-        // and is disabled from the frontend for security. It should be done from the Firebase Console.
+        // and is not done from the client-side for security reasons.
         await deleteDoc(userDoc);
-        console.warn(`User profile ${uid} deleted from Firestore. Please delete the user from the Firebase Authentication console manually.`);
+        console.warn(`User profile ${uid} deleted from Firestore. The administrator should delete the user from the Firebase Authentication console manually to revoke access.`);
         return { success: true };
     } catch (error) {
         console.error("Error deleting user profile: ", error);
