@@ -207,7 +207,6 @@ export default function ReportsPage() {
         });
     }, [accidents, locationFilter, causeFilter, dateFilter]);
 
-    const totalPages = Math.ceil(filteredAccidents.length / rowsPerPage);
     const paginatedAccidents = useMemo(() => {
         const startIndex = (currentPage - 1) * rowsPerPage;
         const endIndex = startIndex + rowsPerPage;
