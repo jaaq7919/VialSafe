@@ -5,6 +5,8 @@ import { getAccidents, type Accident } from "@/services/accidents";
 import { getRecommendations } from "@/services/recommendations";
 import { getSettings } from "@/services/settings";
 import { dbscan } from "@/lib/dbscan";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 // Helper function to process data for charts
 const processChartData = (accidents: Accident[], causeLabels: { [key: string]: string }) => {
@@ -13,20 +15,35 @@ const processChartData = (accidents: Accident[], causeLabels: { [key: string]: s
 
     accidents.forEach(accident => {
         const date = new Date(accident.dateTime);
-        const month = date.toLocaleString('es-ES', { month: 'short' }).replace('.', '');
-        const capitalizedMonth = month.charAt(0).toUpperCase() + month.slice(1);
-
-        accidentsByMonth[capitalizedMonth] = (accidentsByMonth[capitalizedMonth] || 0) + 1;
+        // Format as "Mmm-yy" e.g., "Ene-24"
+        const monthYearKey = format(date, 'MMM-yy', { locale: es });
+        
+        accidentsByMonth[monthYearKey] = (accidentsByMonth[monthYearKey] || 0) + 1;
         
         const causeLabel = causeLabels[accident.cause] || 'Otro';
         accidentsByCause[causeLabel] = (accidentsByCause[causeLabel] || 0) + 1;
     });
 
+    // Create a map to convert "ene-24" to a Date object for sorting
+    const dateMap = new Map<string, Date>();
+    Object.keys(accidentsByMonth).forEach(key => {
+        const [monthStr, yearStr] = key.split('-');
+        const monthIndex = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'].indexOf(monthStr.toLowerCase());
+        const year = parseInt(yearStr, 10) + 2000;
+        if(monthIndex !== -1) {
+            dateMap.set(key, new Date(year, monthIndex));
+        }
+    });
+
     const accidentsByMonthData = Object.entries(accidentsByMonth)
-        .map(([month, accidents]) => ({ month, accidents }))
+        .map(([month, accidents]) => ({ month: month.charAt(0).toUpperCase() + month.slice(1), accidents }))
         .sort((a, b) => {
-            const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-            return months.indexOf(a.month) - months.indexOf(b.month);
+            const dateA = dateMap.get(a.month.toLowerCase());
+            const dateB = dateMap.get(b.month.toLowerCase());
+            if (dateA && dateB) {
+                return dateA.getTime() - dateB.getTime();
+            }
+            return 0;
         });
 
     const accidentsByCauseData = Object.entries(accidentsByCause)
