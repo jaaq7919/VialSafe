@@ -20,6 +20,7 @@ import {
   Route,
   Settings,
   Upload,
+  Warehouse,
 } from "lucide-react";
 
 type Role = UserProfile['role'];
@@ -42,6 +43,12 @@ const navItems = [
     label: "Historial y Reportes",
     icon: FileDown,
     roles: ["Administrador", "Analista de Tráfico", "Operador de Tráfico"],
+  },
+   {
+    href: "/dashboard/inventory",
+    label: "Inventario de Señalización",
+    icon: Warehouse,
+    roles: ["Administrador", "Analista de Tráfico"],
   },
   {
     href: "/dashboard/analysis",
@@ -119,3 +126,5 @@ export function SidebarItems() {
     </SidebarMenu>
   );
 }
+
+    

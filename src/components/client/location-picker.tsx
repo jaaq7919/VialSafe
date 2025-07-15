@@ -37,7 +37,15 @@ const extractAddress = (osmData: any): { prefix: string, street: string } | null
     const { road, highway, suburb, house_number, neighbourhood, intersection } = osmData.address;
 
     let mainStreet = road || highway || intersection || neighbourhood || suburb || '';
-    if (!mainStreet) return null;
+    if (!mainStreet) {
+       // Fallback to display name if no specific road info
+       const displayNameParts = osmData.display_name?.split(',');
+       if(displayNameParts && displayNameParts.length > 0) {
+           mainStreet = displayNameParts[0];
+       } else {
+           return null;
+       }
+    }
     
     // Capitalize words function
     const capitalize = (s: string) => s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
@@ -163,3 +171,5 @@ export default function LocationPicker({ onLocationSelect, initialCenter, readOn
         </div>
     );
 }
+
+    
