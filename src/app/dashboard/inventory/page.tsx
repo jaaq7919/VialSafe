@@ -210,7 +210,7 @@ export default function InventoryPage() {
             <CardDescription>Una lista de toda la señalización vial registrada en el sistema.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-md">
+          <div className="hidden md:block border rounded-md">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -268,6 +268,40 @@ export default function InventoryPage() {
               </TableBody>
             </Table>
           </div>
+
+           <div className="md:hidden space-y-4">
+            {isLoading ? (
+                <div className="flex justify-center items-center h-24"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+            ) : items.length > 0 ? (
+                items.map(item => (
+                    <Card key={item.id} className="p-4">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <p className="font-bold">{item.subtype}</p>
+                                <p className="text-sm text-muted-foreground">{item.locationDescription || 'Ubicación no descrita'}</p>
+                            </div>
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEdit(item)}>
+                                        <FilePenLine className="mr-2 h-4 w-4" /> Editar
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => openDeleteDialog(item)} className="text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                        <div className="mt-2 pt-2 border-t text-sm flex justify-between items-center">
+                            <p><strong>Tipo:</strong> {item.type}</p>
+                            <Badge variant={statusColors[item.status] || 'secondary'}>{item.status}</Badge>
+                        </div>
+                    </Card>
+                ))
+            ) : (
+                <div className="h-24 text-center text-muted-foreground flex items-center justify-center">No hay elementos en el inventario.</div>
+            )}
+        </div>
         </CardContent>
       </Card>
       
@@ -400,4 +434,4 @@ export default function InventoryPage() {
       </AlertDialog>
     </>
   );
-}
+ 
