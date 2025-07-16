@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -40,20 +41,15 @@ export default function ReportsHistoryPage() {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
     const [accidents, setAccidents] = useState<Accident[]>([]);
-
     const [locationFilter, setLocationFilter] = useState("");
     const [causeFilter, setCauseFilter] = useState("all");
     const [dateFilter, setDateFilter] = useState<DateRange | undefined>();
-    
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
-    
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [accidentIdToDelete, setAccidentIdToDelete] = useState<string | null>(null);
-    
     const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
     const [selectedAccident, setSelectedAccident] = useState<Accident | null>(null);
-    
     const [causeOptions, setCauseOptions] = useState<SettingItem[]>([]);
     const [typeOptions, setTypeOptions] = useState<SettingItem[]>([]);
 
@@ -102,7 +98,7 @@ export default function ReportsHistoryPage() {
     const handleEdit = (accidentId: string) => {
         router.push(`/dashboard/accidents?edit=${accidentId}`);
     };
-
+    
     const handleDelete = useCallback(async (id: string) => {
         try {
             await deleteAccident(id);
@@ -110,7 +106,7 @@ export default function ReportsHistoryPage() {
                 title: "Reporte Eliminado",
                 description: "El reporte de accidente ha sido eliminado.",
             });
-            fetchAccidents(); // Refetch data
+            fetchAccidents();
         } catch (error) {
              console.error("Error deleting accident:", error);
              toast({
@@ -126,13 +122,13 @@ export default function ReportsHistoryPage() {
         setIsDeleteDialogOpen(true);
     };
 
-    const asyncHandleDeleteConfirm = useCallback(async () => {
+    const asyncHandleDeleteConfirm = async () => {
         if (accidentIdToDelete) {
             await handleDelete(accidentIdToDelete);
         }
         setIsDeleteDialogOpen(false);
         setAccidentIdToDelete(null);
-    }, [accidentIdToDelete, handleDelete]);
+    };
 
     const handleViewDetails = (accident: Accident) => {
         setSelectedAccident(accident);
@@ -144,16 +140,14 @@ export default function ReportsHistoryPage() {
         setCauseFilter("all");
         setDateFilter(undefined);
     };
-    
+
     const filteredAccidents = useMemo(() => {
         return accidents.filter(accident => {
             if (!accident.dateTime) return false;
             const accidentDate = new Date(accident.dateTime);
             const from = dateFilter?.from;
             const to = dateFilter?.to;
-
             const fullLocation = `${accident.addressPrefix} ${accident.address}`;
-
             if (from) {
                 const startOfDay = new Date(from);
                 startOfDay.setHours(0, 0, 0, 0);
@@ -164,10 +158,8 @@ export default function ReportsHistoryPage() {
                 endOfDay.setHours(23, 59, 59, 999);
                 if (accidentDate > endOfDay) return false;
             }
-            
             const locationMatch = !locationFilter || fullLocation.toLowerCase().includes(locationFilter.toLowerCase());
             const causeMatch = !causeFilter || causeFilter === 'all' || accident.cause === causeFilter;
-
             return locationMatch && causeMatch;
         });
     }, [accidents, locationFilter, causeFilter, dateFilter]);
@@ -176,16 +168,14 @@ export default function ReportsHistoryPage() {
         setCurrentPage(1);
     }, [filteredAccidents]);
     
-    const totalPages = useMemo(() => {
-        return Math.ceil(filteredAccidents.length / rowsPerPage);
-    }, [filteredAccidents.length, rowsPerPage]);
+    const totalPages = useMemo(() => Math.ceil(filteredAccidents.length / rowsPerPage), [filteredAccidents.length, rowsPerPage]);
 
     const paginatedAccidents = useMemo(() => {
         const startIndex = (currentPage - 1) * rowsPerPage;
         const endIndex = startIndex + rowsPerPage;
         return filteredAccidents.slice(startIndex, endIndex);
     }, [filteredAccidents, currentPage, rowsPerPage]);
-
+    
     const handleDownloadCsv = () => {
         const accidentsToExport = filteredAccidents;
         if (accidentsToExport.length === 0) {
@@ -500,3 +490,5 @@ export default function ReportsHistoryPage() {
         </>
     );
 }
+
+    
