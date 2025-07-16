@@ -15,7 +15,7 @@ interface AnalysisMapProps {
   zones: CriticalZone[];
 }
 
-const defaultCenter: L.LatLngExpression = [3.423, -76.324];
+const defaultCenter: L.LatLngExpression = [3.5233, -76.235];
 
 const getColor = (accidentCount: number) => {
     if (accidentCount >= 5) return '#ef4444'; // red-500
