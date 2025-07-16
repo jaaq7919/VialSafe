@@ -58,9 +58,6 @@ export default function ReportsPage() {
     const [causeOptions, setCauseOptions] = useState<SettingItem[]>([]);
     const [typeOptions, setTypeOptions] = useState<SettingItem[]>([]);
 
-    const causeLabels = useMemo(() => Object.fromEntries(causeOptions.map(c => [c.value, c.label])), [causeOptions]);
-    const typeLabels = useMemo(() => Object.fromEntries(typeOptions.map(t => [t.value, t.label])), [typeOptions]);
-
     const fetchAccidents = useCallback(async () => {
         setIsLoading(true);
         try {
@@ -100,10 +97,13 @@ export default function ReportsPage() {
         fetchSettings();
     }, [fetchAccidents, fetchSettings]);
 
+    const causeLabels = useMemo(() => Object.fromEntries(causeOptions.map(c => [c.value, c.label])), [causeOptions]);
+    const typeLabels = useMemo(() => Object.fromEntries(typeOptions.map(t => [t.value, t.label])), [typeOptions]);
+
     const handleEdit = (accidentId: string) => {
         router.push(`/dashboard/accidents?edit=${accidentId}`);
     };
-
+    
     const handleDelete = useCallback(async (id: string) => {
         try {
             await deleteAccident(id);
@@ -111,7 +111,7 @@ export default function ReportsPage() {
                 title: "Reporte Eliminado",
                 description: "El reporte de accidente ha sido eliminado.",
             });
-            fetchAccidents();
+            fetchAccidents(); // Refetch data
         } catch (error) {
              console.error("Error deleting accident:", error);
              toast({
@@ -122,15 +122,17 @@ export default function ReportsPage() {
         }
     }, [toast, fetchAccidents]);
 
+    const asyncHandleDeleteConfirm = async () => {
+        if (accidentIdToDelete) {
+            await handleDelete(accidentIdToDelete);
+        }
+        setIsDeleteDialogOpen(false);
+        setAccidentIdToDelete(null);
+    };
+
     const handleViewDetails = (accident: Accident) => {
         setSelectedAccident(accident);
         setIsDetailsDialogOpen(true);
-    };
-    
-    const handleClearFilters = () => {
-        setLocationFilter("");
-        setCauseFilter("all");
-        setDateFilter(undefined);
     };
     
     const openDeleteDialog = (id: string) => {
@@ -138,15 +140,54 @@ export default function ReportsPage() {
         setIsDeleteDialogOpen(true);
     };
 
-    const handleDeleteConfirm = useCallback(() => {
-        if (accidentIdToDelete) {
-            handleDelete(accidentIdToDelete);
-        }
-        setIsDeleteDialogOpen(false);
-        setAccidentIdToDelete(null);
-    }, [accidentIdToDelete, handleDelete]);
+    const handleClearFilters = () => {
+        setLocationFilter("");
+        setCauseFilter("all");
+        setDateFilter(undefined);
+    };
     
-    const handleDownloadCsv = useCallback(() => {
+    const filteredAccidents = useMemo(() => {
+        return accidents.filter(accident => {
+            if (!accident.dateTime) return false;
+            const accidentDate = new Date(accident.dateTime);
+            const from = dateFilter?.from;
+            const to = dateFilter?.to;
+
+            const fullLocation = `${accident.addressPrefix} ${accident.address}`;
+
+            if (from) {
+                const startOfDay = new Date(from);
+                startOfDay.setHours(0, 0, 0, 0);
+                if (accidentDate < startOfDay) return false;
+            }
+            if (to) {
+                const endOfDay = new Date(to);
+                endOfDay.setHours(23, 59, 59, 999);
+                if (accidentDate > endOfDay) return false;
+            }
+            
+            const locationMatch = !locationFilter || fullLocation.toLowerCase().includes(locationFilter.toLowerCase());
+            const causeMatch = !causeFilter || causeFilter === 'all' || accident.cause === causeFilter;
+
+            return locationMatch && causeMatch;
+        });
+    }, [accidents, locationFilter, causeFilter, dateFilter]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filteredAccidents]);
+    
+    const totalPages = useMemo(() => {
+        return Math.ceil(filteredAccidents.length / rowsPerPage);
+    }, [filteredAccidents.length, rowsPerPage]);
+
+    const paginatedAccidents = useMemo(() => {
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        const endIndex = startIndex + rowsPerPage;
+        return filteredAccidents.slice(startIndex, endIndex);
+    }, [filteredAccidents, currentPage, rowsPerPage]);
+
+    const handleDownloadCsv = () => {
         const accidentsToExport = filteredAccidents;
         if (accidentsToExport.length === 0) {
             toast({
@@ -188,44 +229,8 @@ export default function ReportsPage() {
             title: "Reporte Descargado",
             description: "El archivo CSV ha sido generado exitosamente.",
         });
-    }, [toast, causeLabels, typeLabels]);
+    };
 
-    const filteredAccidents = useMemo(() => {
-        return accidents.filter(accident => {
-            if (!accident.dateTime) return false;
-            const accidentDate = new Date(accident.dateTime);
-            const from = dateFilter?.from;
-            const to = dateFilter?.to;
-
-            const fullLocation = `${accident.addressPrefix} ${accident.address}`;
-
-            if (from && to) {
-                if (accidentDate < from || accidentDate > to) return false;
-            } else if (from) {
-                if(accidentDate < from) return false;
-            } else if (to) {
-                if(accidentDate > to) return false;
-            }
-            
-            const locationMatch = !locationFilter || fullLocation.toLowerCase().includes(locationFilter.toLowerCase());
-            const causeMatch = !causeFilter || causeFilter === 'all' || accident.cause === causeFilter;
-
-            return locationMatch && causeMatch;
-        });
-    }, [accidents, locationFilter, causeFilter, dateFilter]);
-
-    const totalPages = useMemo(() => Math.ceil(filteredAccidents.length / rowsPerPage), [filteredAccidents.length, rowsPerPage]);
-
-    const paginatedAccidents = useMemo(() => {
-        const startIndex = (currentPage - 1) * rowsPerPage;
-        const endIndex = startIndex + rowsPerPage;
-        return filteredAccidents.slice(startIndex, endIndex);
-    }, [filteredAccidents, currentPage, rowsPerPage]);
-
-    useEffect(() => {
-        setCurrentPage(1); // Reset page to 1 on filter change
-    }, [filteredAccidents]);
-    
     return (
         <>
             <div className="flex items-center justify-between">
@@ -428,7 +433,7 @@ export default function ReportsPage() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => setAccidentIdToDelete(null)}>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                        <AlertDialogAction onClick={asyncHandleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -439,6 +444,7 @@ export default function ReportsPage() {
                         <>
                             <DialogHeader>
                                 <DialogTitle>Detalles del Reporte de Accidente</DialogTitle>
+
                                 <DialogDescription>
                                     Información completa del accidente ocurrido en {selectedAccident.addressPrefix} {selectedAccident.address}.
                                 </DialogDescription>
