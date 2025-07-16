@@ -99,9 +99,10 @@ export default function ReportsHistoryPage() {
         router.push(`/dashboard/accidents?edit=${accidentId}`);
     };
     
-    const handleDelete = useCallback(async (id: string) => {
+    const handleDeleteConfirm = async () => {
+        if (!accidentIdToDelete) return;
         try {
-            await deleteAccident(id);
+            await deleteAccident(accidentIdToDelete);
             toast({
                 title: "Reporte Eliminado",
                 description: "El reporte de accidente ha sido eliminado.",
@@ -114,20 +115,15 @@ export default function ReportsHistoryPage() {
                 title: "Error al Eliminar",
                 description: "No se pudo eliminar el reporte.",
             });
+        } finally {
+            setIsDeleteDialogOpen(false);
+            setAccidentIdToDelete(null);
         }
-    }, [toast, fetchAccidents]);
+    };
     
     const openDeleteDialog = (id: string) => {
         setAccidentIdToDelete(id);
         setIsDeleteDialogOpen(true);
-    };
-
-    const asyncHandleDeleteConfirm = async () => {
-        if (accidentIdToDelete) {
-            await handleDelete(accidentIdToDelete);
-        }
-        setIsDeleteDialogOpen(false);
-        setAccidentIdToDelete(null);
     };
 
     const handleViewDetails = (accident: Accident) => {
@@ -166,10 +162,12 @@ export default function ReportsHistoryPage() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [filteredAccidents]);
-    
-    const totalPages = useMemo(() => Math.ceil(filteredAccidents.length / rowsPerPage), [filteredAccidents.length, rowsPerPage]);
+    }, [filteredAccidents.length]);
 
+    const totalPages = useMemo(() => {
+      return Math.ceil(filteredAccidents.length / rowsPerPage);
+    }, [filteredAccidents.length, rowsPerPage]);
+    
     const paginatedAccidents = useMemo(() => {
         const startIndex = (currentPage - 1) * rowsPerPage;
         const endIndex = startIndex + rowsPerPage;
@@ -422,7 +420,7 @@ export default function ReportsHistoryPage() {
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel onClick={() => setAccidentIdToDelete(null)}>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={asyncHandleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                        <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -490,5 +488,3 @@ export default function ReportsHistoryPage() {
         </>
     );
 }
-
-    
