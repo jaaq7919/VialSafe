@@ -15,7 +15,7 @@ interface AnalysisMapProps {
   zones: CriticalZone[];
 }
 
-const defaultCenter: L.LatLngExpression = [3.5233, -76.235];
+const defaultCenter: L.LatLngExpression = [3.523316, -76.234978];
 
 const getColor = (accidentCount: number) => {
     if (accidentCount >= 5) return '#ef4444'; // red-500
@@ -53,7 +53,7 @@ export default function AnalysisMap({ zones }: AnalysisMapProps) {
                 scrollWheelZoom: true,
                 dragging: true,
                 zoomControl: true,
-            }).setView(defaultCenter, 15);
+            }).setView(defaultCenter, 16);
 
             mapRef.current = map;
 
@@ -109,10 +109,10 @@ export default function AnalysisMap({ zones }: AnalysisMapProps) {
                     map.fitBounds(bounds, { padding: [50, 50] });
                 }
             } else {
-                 map.setView(defaultCenter, 15);
+                 map.setView(defaultCenter, 16);
             }
         } else {
-             map.setView(defaultCenter, 15);
+             map.setView(defaultCenter, 16);
         }
 
     }, [zones]);

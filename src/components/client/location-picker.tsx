@@ -16,7 +16,7 @@ interface LocationPickerProps {
   readOnly?: boolean;
 }
 
-const defaultCenter: L.LatLngExpression = [3.5233, -76.235];
+const defaultCenter: L.LatLngExpression = [3.523316, -76.234978];
 
 const addressPrefixMap: { [key: string]: string[] } = {
     CLL: ['calle', 'cll', 'cl'],
@@ -115,7 +115,7 @@ export default function LocationPicker({ onLocationSelect, initialCenter, readOn
                 scrollWheelZoom: !readOnly,
                 dragging: !readOnly,
                 zoomControl: !readOnly,
-            }).setView(center, 15);
+            }).setView(center, 16);
 
             mapRef.current = map;
 
