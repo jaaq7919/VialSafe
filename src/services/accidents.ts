@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp, getDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp, getDoc, query, orderBy } from 'firebase/firestore';
 import { z } from 'zod';
 import { formSchema } from '@/app/dashboard/accidents/page';
 
@@ -42,11 +42,10 @@ const csvRowSchema = z.object({
 
 const accidentsCollection = collection(db, 'accidents');
 
-// Obtener todos los accidentes
+// Obtener todos los accidentes, ordenados por fecha de creación descendente
 export async function getAccidents(): Promise<Accident[]> {
-  console.log("*- Paso 1=>1");
-  const snapshot = await getDocs(accidentsCollection);
-  console.log("*- Paso 1=>2");
+  const q = query(accidentsCollection, orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(q);
   return snapshot.docs.map(doc => {
     const data = doc.data();
     return {

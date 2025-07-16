@@ -1,71 +1,136 @@
 
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, FilterX, Search } from "lucide-react";
+import { Calendar as CalendarIcon, FilterX, Search, Loader2, MoreHorizontal, FilePenLine, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { getSettings, type SettingItem } from '@/services/settings';
+import { getAccidents, deleteAccident, type Accident } from "@/services/accidents";
 import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 export default function HistoryPage() {
     const { toast } = useToast();
-    const [causeOptions, setCauseOptions] = useState<SettingItem[]>([]);
-    const [typeOptions, setTypeOptions] = useState<SettingItem[]>([]);
+    const router = useRouter();
 
+    // Data and loading state
+    const [allAccidents, setAllAccidents] = useState<Accident[]>([]);
+    const [filteredAccidents, setFilteredAccidents] = useState<Accident[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSearching, setIsSearching] = useState(false);
+
+    // Filter states
     const [causeFilter, setCauseFilter] = useState("all");
     const [typeFilter, setTypeFilter] = useState("all");
     const [startDate, setStartDate] = useState<Date | undefined>();
     const [endDate, setEndDate] = useState<Date | undefined>();
 
-    const [isLoading, setIsLoading] = useState(false);
+    // Options for filters
+    const [causeOptions, setCauseOptions] = useState<SettingItem[]>([]);
+    const [typeOptions, setTypeOptions] = useState<SettingItem[]>([]);
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [rowsPerPage] = useState(10);
+    
+    // Delete dialog state
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [accidentToDelete, setAccidentToDelete] = useState<Accident | null>(null);
+
+    // Fetch initial data (settings and all accidents)
+    const fetchData = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const [settings, accidents] = await Promise.all([getSettings(), getAccidents()]);
+            if (settings) {
+                setCauseOptions(settings.accidentCauses || []);
+                setTypeOptions(settings.accidentTypes || []);
+            }
+            setAllAccidents(accidents);
+            setFilteredAccidents(accidents); // Initially show all
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            toast({
+                variant: "destructive",
+                title: "Error de Carga",
+                description: "No se pudieron cargar los datos iniciales.",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [toast]);
 
     useEffect(() => {
-        const fetchSettingsForFilters = async () => {
-            try {
-                const settings = await getSettings();
-                if (settings) {
-                    setCauseOptions(settings.accidentCauses || []);
-                    setTypeOptions(settings.accidentTypes || []);
-                }
-            } catch (error) {
-                console.error("Error fetching settings for filters:", error);
-                toast({
-                    variant: "destructive",
-                    title: "Error de Configuración",
-                    description: "No se pudieron cargar las opciones de filtro.",
-                });
-            }
-        };
-        fetchSettingsForFilters();
-    }, [toast]);
+        fetchData();
+    }, [fetchData]);
 
     const handleClearFilters = () => {
         setCauseFilter("all");
         setTypeFilter("all");
         setStartDate(undefined);
         setEndDate(undefined);
+        setFilteredAccidents(allAccidents);
+        setCurrentPage(1);
     };
 
     const handleSearch = () => {
-        // Lógica de búsqueda se implementará aquí
-        console.log({
-            startDate,
-            endDate,
-            typeFilter,
-            causeFilter,
+        setIsSearching(true);
+        setCurrentPage(1);
+        const results = allAccidents.filter(accident => {
+            const accidentDate = new Date(accident.dateTime);
+            const from = startDate;
+            const to = endDate;
+
+            if (from && accidentDate < from) return false;
+            if (to) {
+                const endOfDay = new Date(to);
+                endOfDay.setHours(23, 59, 59, 999);
+                if (accidentDate > endOfDay) return false;
+            }
+            if (typeFilter !== 'all' && accident.type !== typeFilter) return false;
+            if (causeFilter !== 'all' && accident.cause !== causeFilter) return false;
+            
+            return true;
         });
-        toast({
-            title: "Búsqueda iniciada",
-            description: "Los filtros se han aplicado (ver consola).",
-        });
+        setFilteredAccidents(results);
+        setIsSearching(false);
     };
+
+    const handleDelete = (accident: Accident) => {
+        setAccidentToDelete(accident);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!accidentToDelete) return;
+        try {
+            await deleteAccident(accidentToDelete.id);
+            toast({ title: "Accidente Eliminado", description: "El reporte ha sido eliminado exitosamente." });
+            fetchData(); // Refresh data
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "No se pudo eliminar el reporte." });
+        } finally {
+            setIsDeleteDialogOpen(false);
+            setAccidentToDelete(null);
+        }
+    };
+
+    const paginatedAccidents = useMemo(() => {
+        const startIndex = (currentPage - 1) * rowsPerPage;
+        return filteredAccidents.slice(startIndex, startIndex + rowsPerPage);
+    }, [filteredAccidents, currentPage, rowsPerPage]);
+
+    const totalPages = Math.ceil(filteredAccidents.length / rowsPerPage);
 
     return (
         <>
@@ -85,30 +150,18 @@ export default function HistoryPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                        {/* Filters... */}
                         <div className="flex flex-col gap-2">
                              <label className="text-sm font-medium">Fecha de Inicio</label>
                              <Popover>
                                 <PopoverTrigger asChild>
-                                    <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                            "justify-start text-left font-normal",
-                                            !startDate && "text-muted-foreground"
-                                        )}
-                                    >
+                                    <Button variant={"outline"} className={cn("justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                         {startDate ? format(startDate, "PPP", { locale: es }) : <span>Seleccione fecha</span>}
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={startDate}
-                                        onSelect={setStartDate}
-                                        disabled={(date) => date > new Date() || (endDate ? date > endDate : false)}
-                                        initialFocus
-                                        locale={es}
-                                    />
+                                    <Calendar mode="single" selected={startDate} onSelect={setStartDate} disabled={(date) => date > new Date() || (endDate ? date > endDate : false)} initialFocus locale={es} />
                                 </PopoverContent>
                             </Popover>
                         </div>
@@ -116,63 +169,39 @@ export default function HistoryPage() {
                              <label className="text-sm font-medium">Fecha de Fin</label>
                              <Popover>
                                 <PopoverTrigger asChild>
-                                    <Button
-                                        variant={"outline"}
-                                        className={cn(
-                                            "justify-start text-left font-normal",
-                                            !endDate && "text-muted-foreground"
-                                        )}
-                                    >
+                                    <Button variant={"outline"} className={cn("justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
                                         <CalendarIcon className="mr-2 h-4 w-4" />
                                         {endDate ? format(endDate, "PPP", { locale: es }) : <span>Seleccione fecha</span>}
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={endDate}
-                                        onSelect={setEndDate}
-                                        disabled={(date) => date > new Date() || (startDate ? date < startDate : false)}
-                                        initialFocus
-                                        locale={es}
-                                    />
+                                    <Calendar mode="single" selected={endDate} onSelect={setEndDate} disabled={(date) => date > new Date() || (startDate ? date < startDate : false)} initialFocus locale={es} />
                                 </PopoverContent>
                             </Popover>
                         </div>
-
                         <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium">Tipo de Accidente</label>
                             <Select value={typeFilter} onValueChange={setTypeFilter}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Todos los tipos" />
-                                </SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder="Todos los tipos" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todos los tipos</SelectItem>
-                                    {typeOptions.map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                                    ))}
+                                    {typeOptions.map((option) => ( <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}
                                 </SelectContent>
                             </Select>
                         </div>
-
                         <div className="flex flex-col gap-2">
                             <label className="text-sm font-medium">Causa de Accidente</label>
                             <Select value={causeFilter} onValueChange={setCauseFilter}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Todas las causas" />
-                                </SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder="Todas las causas" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="all">Todas las causas</SelectItem>
-                                    {causeOptions.map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                                    ))}
+                                    {causeOptions.map((option) => (<SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>))}
                                 </SelectContent>
                             </Select>
                         </div>
-                        
                         <div className="flex gap-2">
-                            <Button onClick={handleSearch} disabled={isLoading} className="w-full">
-                                <Search className="mr-2 h-4 w-4" />
+                            <Button onClick={handleSearch} disabled={isSearching} className="w-full">
+                                {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                                 Buscar
                             </Button>
                             <Button variant="ghost" onClick={handleClearFilters} size="icon" className="shrink-0">
@@ -183,6 +212,81 @@ export default function HistoryPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            <Card className="mt-6">
+                <CardHeader>
+                    <CardTitle>Resultados</CardTitle>
+                    <CardDescription>Se encontraron {filteredAccidents.length} registros que coinciden con su búsqueda.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="border rounded-md">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Ubicación</TableHead>
+                                    <TableHead>Fecha y Hora</TableHead>
+                                    <TableHead>Tipo</TableHead>
+                                    <TableHead>Causa</TableHead>
+                                    <TableHead className="text-right">Acciones</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoading ? (
+                                    <TableRow><TableCell colSpan={5} className="h-24 text-center"><Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" /></TableCell></TableRow>
+                                ) : paginatedAccidents.length > 0 ? (
+                                    paginatedAccidents.map(accident => (
+                                        <TableRow key={accident.id}>
+                                            <TableCell className="font-medium">{accident.location}</TableCell>
+                                            <TableCell>{format(new Date(accident.dateTime), "dd/MM/yyyy HH:mm")}</TableCell>
+                                            <TableCell>{accident.type}</TableCell>
+                                            <TableCell>{accident.cause}</TableCell>
+                                            <TableCell className="text-right">
+                                                 <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => router.push(`/dashboard/accidents?edit=${accident.id}`)}>
+                                                            <FilePenLine className="mr-2 h-4 w-4" /> Editar
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onClick={() => handleDelete(accident)} className="text-destructive">
+                                                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No se encontraron accidentes con los filtros seleccionados.</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+                {totalPages > 1 && (
+                    <CardFooter className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</p>
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Anterior</Button>
+                            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>Siguiente</Button>
+                        </div>
+                    </CardFooter>
+                )}
+            </Card>
+
+             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción eliminará permanentemente el reporte de accidente en <strong>{accidentToDelete?.location}</strong>. Esta acción no se puede deshacer.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 }
