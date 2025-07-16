@@ -314,107 +314,108 @@ export default function InventoryPage() {
                   </DialogDescription>
               </DialogHeader>
               <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-                      <div className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="type"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Tipo de Elemento</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} id="inventory-form">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                          <div className="space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="type"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Tipo de Elemento</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue placeholder="Seleccione un tipo" /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {itemTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="subtype"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Nombre o Subtipo</FormLabel>
                                         <FormControl>
-                                            <SelectTrigger><SelectValue placeholder="Seleccione un tipo" /></SelectTrigger>
+                                            <Input placeholder="Ej: Pare, Ceda el Paso, Semáforo Peatonal" {...field} />
                                         </FormControl>
-                                        <SelectContent>
-                                            {itemTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="subtype"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Nombre o Subtipo</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Ej: Pare, Ceda el Paso, Semáforo Peatonal" {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="status"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Estado Actual</FormLabel>
-                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="status"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Estado Actual</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue placeholder="Seleccione el estado" /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {itemStatuses.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                             <FormField
+                                control={form.control}
+                                name="notes"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Notas Adicionales</FormLabel>
                                         <FormControl>
-                                            <SelectTrigger><SelectValue placeholder="Seleccione el estado" /></SelectTrigger>
+                                            <Textarea placeholder="Ej: Visibilidad reducida por un árbol, necesita repintado, etc." {...field} />
                                         </FormControl>
-                                        <SelectContent>
-                                            {itemStatuses.map(status => <SelectItem key={status} value={status}>{status}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                         <FormField
-                            control={form.control}
-                            name="notes"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Notas Adicionales</FormLabel>
-                                    <FormControl>
-                                        <Textarea placeholder="Ej: Visibilidad reducida por un árbol, necesita repintado, etc." {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                      </div>
-                      <div className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="locationDescription"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Descripción de Ubicación</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="Autocompletado desde el mapa..." {...field} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                        <div>
-                          <FormLabel>Geolocalización</FormLabel>
-                          <div className="h-64 mt-2 rounded-md overflow-hidden border">
-                              <LocationPicker 
-                                  initialCenter={currentLocation}
-                                  onLocationSelect={handleLocationSelect}
-                              />
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                           </div>
-                        </div>
+                          <div className="space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="locationDescription"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Descripción de Ubicación</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Autocompletado desde el mapa..." {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <div>
+                              <FormLabel>Geolocalización</FormLabel>
+                              <div className="h-64 mt-2 rounded-md overflow-hidden border">
+                                  <LocationPicker 
+                                      initialCenter={currentLocation}
+                                      onLocationSelect={handleLocationSelect}
+                                  />
+                              </div>
+                            </div>
+                          </div>
                       </div>
-
-                      <DialogFooter className="md:col-span-2">
-                          <DialogClose asChild>
-                              <Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button>
-                          </DialogClose>
-                          <Button type="submit" disabled={isSubmitting}>
-                              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                              {editingItem ? "Guardar Cambios" : "Agregar Elemento"}
-                          </Button>
-                      </DialogFooter>
                   </form>
               </Form>
+              <DialogFooter>
+                  <DialogClose asChild>
+                      <Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button>
+                  </DialogClose>
+                  <Button type="submit" form="inventory-form" disabled={isSubmitting}>
+                      {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {editingItem ? "Guardar Cambios" : "Agregar Elemento"}
+                  </Button>
+              </DialogFooter>
           </DialogContent>
       </Dialog>
       
