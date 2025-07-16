@@ -237,68 +237,109 @@ export default function UsersPage() {
             <CardDescription>Una lista de todos los perfiles de usuario en el sistema Centinela Vial.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Usuario</TableHead>
-                <TableHead>Rol</TableHead>
-                <TableHead className="text-right">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
+          <div className="hidden md:block border rounded-md">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={3} className="h-24 text-center">
-                    <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-                  </TableCell>
+                  <TableHead>Usuario</TableHead>
+                  <TableHead>Rol</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
-              ) : (
-                users.map((user) => (
-                  <TableRow key={user.uid}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={user.avatarUrl} alt={`${user.firstName} ${user.lastName}`} />
-                          <AvatarFallback>{user.initials}</AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{user.firstName} {user.lastName}</p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={roleVariant[user.role]}>{user.role}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(user)}>
-                            <FilePenLine className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openDeleteDialog(user)} className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center">
+                      <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
                     </TableCell>
                   </TableRow>
+                ) : (
+                  users.map((user) => (
+                    <TableRow key={user.uid}>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarImage src={user.avatarUrl} alt={`${user.firstName} ${user.lastName}`} />
+                            <AvatarFallback>{user.initials}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{user.firstName} {user.lastName}</p>
+                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={roleVariant[user.role]}>{user.role}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEdit(user)}>
+                              <FilePenLine className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openDeleteDialog(user)} className="text-destructive">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="md:hidden space-y-4">
+            {isLoading ? (
+              <div className="flex justify-center items-center h-24"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+            ) : users.length > 0 ? (
+                users.map(user => (
+                    <Card key={user.uid} className="p-4">
+                        <div className="flex justify-between items-start">
+                             <div className="flex items-center gap-3">
+                                <Avatar>
+                                <AvatarImage src={user.avatarUrl} alt={`${user.firstName} ${user.lastName}`} />
+                                <AvatarFallback>{user.initials}</AvatarFallback>
+                                </Avatar>
+                                <div>
+                                <p className="font-medium">{user.firstName} {user.lastName}</p>
+                                <p className="text-sm text-muted-foreground">{user.email}</p>
+                                </div>
+                            </div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEdit(user)}>
+                                        <FilePenLine className="mr-2 h-4 w-4" /> Editar
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => openDeleteDialog(user)} className="text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                        <div className="mt-2 pt-2 border-t text-sm">
+                            <Badge variant={roleVariant[user.role]}>{user.role}</Badge>
+                        </div>
+                    </Card>
                 ))
-              )}
-            </TableBody>
-          </Table>
+            ) : (
+                <div className="h-24 text-center text-muted-foreground flex items-center justify-center">No hay usuarios registrados.</div>
+            )}
+          </div>
         </CardContent>
       </Card>
       
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-md">
               <DialogHeader>
                   <DialogTitle>{editingUser ? "Editar Perfil de Usuario" : "Crear Nuevo Usuario"}</DialogTitle>
                   <DialogDescription>
@@ -409,7 +450,7 @@ export default function UsersPage() {
                               </FormItem>
                           )}
                         />
-                      <DialogFooter>
+                      <DialogFooter className="pt-4">
                           <DialogClose asChild>
                               <Button type="button" variant="outline" disabled={isSubmitting}>Cancelar</Button>
                           </DialogClose>
@@ -443,3 +484,5 @@ export default function UsersPage() {
     </>
   );
 }
+
+    
