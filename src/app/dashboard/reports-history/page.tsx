@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
@@ -36,7 +35,7 @@ export const crossingLabels: { [key: string]: string } = {
     'inexistente': 'Inexistente',
 };
 
-export default function ReportsPage() {
+export default function ReportsHistoryPage() {
     const { toast } = useToast();
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
@@ -103,7 +102,7 @@ export default function ReportsPage() {
     const handleEdit = (accidentId: string) => {
         router.push(`/dashboard/accidents?edit=${accidentId}`);
     };
-    
+
     const handleDelete = useCallback(async (id: string) => {
         try {
             await deleteAccident(id);
@@ -121,23 +120,23 @@ export default function ReportsPage() {
             });
         }
     }, [toast, fetchAccidents]);
+    
+    const openDeleteDialog = (id: string) => {
+        setAccidentIdToDelete(id);
+        setIsDeleteDialogOpen(true);
+    };
 
-    const asyncHandleDeleteConfirm = async () => {
+    const asyncHandleDeleteConfirm = useCallback(async () => {
         if (accidentIdToDelete) {
             await handleDelete(accidentIdToDelete);
         }
         setIsDeleteDialogOpen(false);
         setAccidentIdToDelete(null);
-    };
+    }, [accidentIdToDelete, handleDelete]);
 
     const handleViewDetails = (accident: Accident) => {
         setSelectedAccident(accident);
         setIsDetailsDialogOpen(true);
-    };
-    
-    const openDeleteDialog = (id: string) => {
-        setAccidentIdToDelete(id);
-        setIsDeleteDialogOpen(true);
     };
 
     const handleClearFilters = () => {
@@ -235,7 +234,7 @@ export default function ReportsPage() {
         <>
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Historial y Reportes</h1>
+                    <h1 className="text-3xl font-bold tracking-tight">Reporte e Histórico</h1>
                     <p className="text-muted-foreground mt-1">
                         Consulte, filtre y exporte los datos de accidentalidad.
                     </p>
@@ -501,5 +500,3 @@ export default function ReportsPage() {
         </>
     );
 }
-
-    

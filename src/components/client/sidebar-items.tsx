@@ -39,8 +39,8 @@ const navItems = [
     roles: ["Administrador", "Analista de Tráfico", "Operador de Tráfico"],
   },
   {
-    href: "/dashboard/reports",
-    label: "Historial y Reportes",
+    href: "/dashboard/reports-history",
+    label: "Reporte e Histórico",
     icon: FileDown,
     roles: ["Administrador", "Analista de Tráfico", "Operador de Tráfico"],
   },
