@@ -16,7 +16,7 @@ interface LocationPickerProps {
   readOnly?: boolean;
 }
 
-const defaultCenter: L.LatLngExpression = [3.523316, -76.234978];
+const defaultCenter: L.LatLngExpression = [3.325515, -76.236995];
 
 const addressPrefixMap: { [key: string]: string[] } = {
     CLL: ['calle', 'cll', 'cl'],
