@@ -20,7 +20,7 @@ import {
   Settings,
   Upload,
   Warehouse,
-  BookClock,
+  History,
 } from "lucide-react";
 
 type Role = UserProfile['role'];
@@ -41,7 +41,7 @@ const navItems = [
   {
     href: "/dashboard/history",
     label: "Histórico",
-    icon: BookClock,
+    icon: History,
     roles: ["Administrador", "Analista de Tráfico", "Operador de Tráfico"],
   },
    {
