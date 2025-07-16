@@ -133,7 +133,7 @@ export default function AccidentsPage() {
             const accident = await getAccident(id);
             if (!accident) {
                 toast({ variant: "destructive", title: "Error", description: "No se encontró el accidente a editar." });
-                router.push('/dashboard');
+                router.push('/dashboard/history');
                 return;
             }
             const accidentDate = new Date(accident.dateTime);
@@ -188,7 +188,7 @@ export default function AccidentsPage() {
                     description: "El nuevo reporte de accidente se ha guardado.",
                 });
             }
-            router.push('/dashboard');
+            router.push('/dashboard/history');
 
         } catch (error) {
             console.error("Error en el registro:", error);
@@ -205,7 +205,7 @@ export default function AccidentsPage() {
     const handleCancel = () => {
         setEditingAccidentId(null);
         form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, type: undefined, cause: undefined, crossingStatus: undefined, observations: "", latitude: undefined, longitude: undefined });
-        router.push('/dashboard');
+        router.push('/dashboard/history');
     }
 
     const handleLocationSelect = useCallback((location: { prefix: string, street: string, lat: number, lng: number }) => {
@@ -230,141 +230,141 @@ export default function AccidentsPage() {
                     <CardDescription>Complete los detalles del formulario o haga clic en el mapa para autocompletar la ubicación.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-6">
-                    <div className="space-y-6">
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="md:col-span-2 grid grid-cols-3 gap-4">
-                                        <FormField control={form.control} name="addressPrefix" render={({ field }) => (
-                                            <FormItem className="col-span-1">
-                                                <FormLabel>Prefijo</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value}>
-                                                    <FormControl><SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger></FormControl>
-                                                    <SelectContent>
-                                                        {addressPrefixes.map(option => (
-                                                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}/>
-                                        <FormField control={form.control} name="address" render={({ field }) => (
-                                            <FormItem className="col-span-2">
-                                                <FormLabel>Dirección</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="Ej: 8 con Calle 10" {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}/>
-                                </div>
-
-                                    <FormField control={form.control} name="date" render={({ field }) => (
-                                        <FormItem className="flex flex-col">
-                                            <FormLabel>Fecha</FormLabel>
-                                            <Popover>
-                                                <PopoverTrigger asChild>
-                                                    <FormControl>
-                                                    <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                        {field.value ? format(field.value, "PPP", { locale: es }) : <span>Elige una fecha</span>}
-                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                    </Button>
-                                                    </FormControl>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="w-auto p-0" align="start">
-                                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus locale={es}/>
-                                                </PopoverContent>
-                                            </Popover>
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="md:col-span-2 grid grid-cols-3 gap-4">
+                                    <FormField control={form.control} name="addressPrefix" render={({ field }) => (
+                                        <FormItem className="col-span-1">
+                                            <FormLabel>Prefijo</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    {addressPrefixes.map(option => (
+                                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}/>
-
-                                    <FormField control={form.control} name="time" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Hora</FormLabel>
+                                    <FormField control={form.control} name="address" render={({ field }) => (
+                                        <FormItem className="col-span-2">
+                                            <FormLabel>Dirección</FormLabel>
                                             <FormControl>
-                                                <Input type="time" {...field} />
+                                                <Input placeholder="Ej: 8 con Calle 10" {...field} />
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}/>
+                            </div>
 
-                                    <FormField control={form.control} name="type" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Tipo de Accidente</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un tipo" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    {typeOptions.map(option => (
-                                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}/>
-
-                                    <FormField control={form.control} name="cause" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Causa Probable</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccione una causa" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    {causeOptions.map(option => (
-                                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}/>
-
-                                    <FormField control={form.control} name="crossingStatus" render={({ field }) => (
-                                        <FormItem className="md:col-span-2">
-                                            <FormLabel>Estado del Cruce</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un estado" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="buena">Buena</SelectItem>
-                                                    <SelectItem value="regular">Regular</SelectItem>
-                                                    <SelectItem value="mala">Mala</SelectItem>
-                                                    <SelectItem value="inexistente">Inexistente</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}/>
-                                    <FormField
-                                        control={form.control}
-                                        name="observations"
-                                        render={({ field }) => (
-                                            <FormItem className="md:col-span-2">
-                                                <FormLabel>Observaciones</FormLabel>
+                                <FormField control={form.control} name="date" render={({ field }) => (
+                                    <FormItem className="flex flex-col">
+                                        <FormLabel>Fecha</FormLabel>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
                                                 <FormControl>
-                                                    <Textarea
-                                                        placeholder="Añada cualquier detalle relevante del accidente..."
-                                                        {...field}
-                                                    />
+                                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                    {field.value ? format(field.value, "PPP", { locale: es }) : <span>Elige una fecha</span>}
+                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
                                                 </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button type="submit" disabled={isSubmitting}>
-                                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        {editingAccidentId ? 'Actualizar Reporte' : 'Enviar Reporte'}
-                                    </Button>
-                                    <Button variant="outline" type="button" onClick={handleCancel}>Cancelar</Button>
-                                </div>
-                            </form>
-                        </Form>
-                    </div>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0" align="start">
+                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus locale={es}/>
+                                            </PopoverContent>
+                                        </Popover>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+
+                                <FormField control={form.control} name="time" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Hora</FormLabel>
+                                        <FormControl>
+                                            <Input type="time" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+
+                                <FormField control={form.control} name="type" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Tipo de Accidente</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un tipo" /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {typeOptions.map(option => (
+                                                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+
+                                <FormField control={form.control} name="cause" render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Causa Probable</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccione una causa" /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                {causeOptions.map(option => (
+                                                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+
+                                <FormField control={form.control} name="crossingStatus" render={({ field }) => (
+                                    <FormItem className="md:col-span-2">
+                                        <FormLabel>Estado del Cruce</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
+                                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un estado" /></SelectTrigger></FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="buena">Buena</SelectItem>
+                                                <SelectItem value="regular">Regular</SelectItem>
+                                                <SelectItem value="mala">Mala</SelectItem>
+                                                <SelectItem value="inexistente">Inexistente</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}/>
+                                <FormField
+                                    control={form.control}
+                                    name="observations"
+                                    render={({ field }) => (
+                                        <FormItem className="md:col-span-2">
+                                            <FormLabel>Observaciones</FormLabel>
+                                            <FormControl>
+                                                <Textarea
+                                                    placeholder="Añada cualquier detalle relevante del accidente..."
+                                                    {...field}
+                                                />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <Button type="submit" disabled={isSubmitting}>
+                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    {editingAccidentId ? 'Actualizar Reporte' : 'Enviar Reporte'}
+                                </Button>
+                                <Button variant="outline" type="button" onClick={handleCancel}>Cancelar</Button>
+                            </div>
+                        </form>
+                    </Form>
                      <div className="space-y-4">
                         <label className="text-sm font-medium">Ubicar en el Mapa</label>
-                        <LocationPicker onLocationSelect={handleLocationSelect} />
+                        <div className="h-[400px] md:h-full w-full rounded-md overflow-hidden border">
+                          <LocationPicker onLocationSelect={handleLocationSelect} />
+                        </div>
                     </div>
                 </CardContent>
             </Card>
