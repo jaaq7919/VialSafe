@@ -48,7 +48,6 @@ export default function TrackingPage() {
 
 
   const handleStatusChange = async (id: string, newStatus: RecommendationStatus) => {
-    // Optimistically update UI
     setRecommendations(prev =>
       prev.map(rec => (rec.id === id ? { ...rec, status: newStatus } : rec))
     );
@@ -66,7 +65,6 @@ export default function TrackingPage() {
             title: "Error al Actualizar",
             description: "No se pudo guardar el nuevo estado. Revirtiendo cambio."
         });
-        // Revert UI on failure
         fetchRecs(); 
     }
   };
@@ -122,7 +120,7 @@ export default function TrackingPage() {
           <CardDescription>Una lista de todas las sugerencias de intervención y puestos de control guardadas en el sistema.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="border rounded-md">
+          <div className="hidden md:block border rounded-md">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -177,6 +175,45 @@ export default function TrackingPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+          
+           <div className="md:hidden space-y-4">
+              {isLoading ? (
+                  <div className="flex justify-center items-center h-24"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+              ) : recommendations.length > 0 ? (
+                  recommendations.map(rec => (
+                      <Card key={rec.id} className="p-4">
+                          <div className="space-y-2">
+                              <div>
+                                  <p className="font-bold">{rec.description}</p>
+                                  <p className="text-sm text-muted-foreground">{rec.location}</p>
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                  <Badge variant={rec.type === 'Intervención Vial' ? 'secondary' : 'outline'}>{rec.type}</Badge>
+                                  <p className="text-muted-foreground">{format(new Date(rec.createdAt), 'dd/MM/yyyy', { locale: es })}</p>
+                              </div>
+                              <div className="pt-2">
+                                   <Select value={rec.status} onValueChange={(value: RecommendationStatus) => handleStatusChange(rec.id, value)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Cambiar estado" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Sugerida">Sugerida</SelectItem>
+                                            <SelectItem value="Aprobada">Aprobada</SelectItem>
+                                            <SelectItem value="En Ejecución">En Ejecución</SelectItem>
+                                            <SelectItem value="Implementada">Implementada</SelectItem>
+                                            <SelectItem value="Rechazada">Rechazada</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                              </div>
+                          </div>
+                      </Card>
+                  ))
+              ) : (
+                  <div className="h-24 text-center text-muted-foreground flex items-center justify-center">
+                      No hay recomendaciones guardadas.
+                  </div>
+              )}
           </div>
         </CardContent>
       </Card>
