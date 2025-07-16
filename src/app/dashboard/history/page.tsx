@@ -149,8 +149,7 @@ export default function HistoryPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
-                        {/* Filters... */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-end">
                         <div className="flex flex-col gap-2">
                              <label className="text-sm font-medium">Fecha de Inicio</label>
                              <Popover>
@@ -199,7 +198,7 @@ export default function HistoryPage() {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 lg:col-span-3 xl:col-span-1">
                             <Button onClick={handleSearch} disabled={isSearching} className="w-full">
                                 {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
                                 Buscar
@@ -219,7 +218,8 @@ export default function HistoryPage() {
                     <CardDescription>Se encontraron {filteredAccidents.length} registros que coinciden con su búsqueda.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="border rounded-md">
+                    {/* Responsive Table/Card List */}
+                    <div className="hidden md:block border rounded-md">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -261,9 +261,44 @@ export default function HistoryPage() {
                             </TableBody>
                         </Table>
                     </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-4">
+                        {isLoading ? (
+                            <div className="flex justify-center items-center h-24"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                        ) : paginatedAccidents.length > 0 ? (
+                            paginatedAccidents.map(accident => (
+                                <Card key={accident.id} className="p-4">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-bold">{accident.location}</p>
+                                            <p className="text-sm text-muted-foreground">{format(new Date(accident.dateTime), "dd/MM/yyyy, HH:mm")}</p>
+                                        </div>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onClick={() => router.push(`/dashboard/accidents?edit=${accident.id}`)}>
+                                                    <FilePenLine className="mr-2 h-4 w-4" /> Editar
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleDelete(accident)} className="text-destructive">
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
+                                    <div className="mt-2 pt-2 border-t text-sm">
+                                        <p><strong>Tipo:</strong> {accident.type}</p>
+                                        <p><strong>Causa:</strong> {accident.cause}</p>
+                                    </div>
+                                </Card>
+                            ))
+                        ) : (
+                             <div className="h-24 text-center text-muted-foreground flex items-center justify-center">No se encontraron accidentes.</div>
+                        )}
+                    </div>
                 </CardContent>
                 {totalPages > 1 && (
-                    <CardFooter className="flex items-center justify-between">
+                    <CardFooter className="flex items-center justify-between pt-6">
                         <p className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</p>
                         <div className="flex gap-2">
                             <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>Anterior</Button>
