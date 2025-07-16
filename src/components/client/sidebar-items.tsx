@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -19,6 +20,7 @@ import {
   Settings,
   Upload,
   Warehouse,
+  BookClock,
 } from "lucide-react";
 
 type Role = UserProfile['role'];
@@ -34,6 +36,12 @@ const navItems = [
     href: "/dashboard/accidents",
     label: "Registro de Accidentes",
     icon: Siren,
+    roles: ["Administrador", "Analista de Tráfico", "Operador de Tráfico"],
+  },
+  {
+    href: "/dashboard/history",
+    label: "Histórico",
+    icon: BookClock,
     roles: ["Administrador", "Analista de Tráfico", "Operador de Tráfico"],
   },
    {
