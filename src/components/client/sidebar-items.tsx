@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -16,7 +15,6 @@ import {
   BarChartHorizontal,
   Lightbulb,
   ClipboardCheck,
-  FileDown,
   Route,
   Settings,
   Upload,
@@ -36,12 +34,6 @@ const navItems = [
     href: "/dashboard/accidents",
     label: "Registro de Accidentes",
     icon: Siren,
-    roles: ["Administrador", "Analista de Tráfico", "Operador de Tráfico"],
-  },
-  {
-    href: "/dashboard/reports-history",
-    label: "Reporte e Histórico",
-    icon: FileDown,
     roles: ["Administrador", "Analista de Tráfico", "Operador de Tráfico"],
   },
    {
@@ -126,5 +118,3 @@ export function SidebarItems() {
     </SidebarMenu>
   );
 }
-
-    

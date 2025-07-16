@@ -133,7 +133,7 @@ export default function AccidentsPage() {
             const accident = await getAccident(id);
             if (!accident) {
                 toast({ variant: "destructive", title: "Error", description: "No se encontró el accidente a editar." });
-                router.push('/dashboard/reports-history');
+                router.push('/dashboard');
                 return;
             }
             const accidentDate = new Date(accident.dateTime);
@@ -188,7 +188,7 @@ export default function AccidentsPage() {
                     description: "El nuevo reporte de accidente se ha guardado.",
                 });
             }
-            router.push('/dashboard/reports-history');
+            router.push('/dashboard');
 
         } catch (error) {
             console.error("Error en el registro:", error);
@@ -205,7 +205,7 @@ export default function AccidentsPage() {
     const handleCancel = () => {
         setEditingAccidentId(null);
         form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, type: undefined, cause: undefined, crossingStatus: undefined, observations: "", latitude: undefined, longitude: undefined });
-        router.push('/dashboard/reports-history');
+        router.push('/dashboard');
     }
 
     const handleLocationSelect = useCallback((location: { prefix: string, street: string, lat: number, lng: number }) => {
