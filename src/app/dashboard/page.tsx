@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Eye, MapPin, Wrench, Siren, CheckCircle, Loader2, Calendar as CalendarIcon, FilterX } from "lucide-react";
-import { format } from "date-fns";
+import { format, subMonths, startOfMonth } from "date-fns";
 import { es } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import type { DateRange } from "react-day-picker";
@@ -17,6 +17,7 @@ import { getSettings, type SettingItem } from "@/services/settings";
 import { getDashboardData, type DashboardData } from "@/services/dashboard";
 import { dbscan } from "@/lib/dbscan";
 import dynamic from 'next/dynamic';
+import { DashboardCharts } from '@/components/client/dashboard-charts';
 
 const UnifiedMap = dynamic(() => import('@/components/client/unified-map'), {
     ssr: false,
@@ -104,7 +105,6 @@ export default function DashboardPage() {
       zonesCount = uniqueClusters.size;
     }
     
-    // Recommendations are not filtered by date/type/cause, they show the global status.
     const pendingCount = dashboardData.recommendations.filter(rec => 
       rec.status === 'Sugerida' || rec.status === 'Aprobada' || rec.status === 'En Ejecución'
     ).length;
@@ -123,6 +123,43 @@ export default function DashboardPage() {
     { title: "Intervenciones Pendientes (Total)", value: pendingInterventionsCount.toString(), icon: Wrench, change: "Sugeridas, aprobadas o en ejecución" },
     { title: "Medidas Implementadas (Total)", value: implementedMeasuresCount.toString(), icon: CheckCircle, change: "Recomendaciones completadas" },
   ];
+
+  // Data for charts
+  const { accidentsByMonthData, accidentsByCauseData } = useMemo(() => {
+    // Accidents by Month (last 12 months)
+    const monthlyCounts: { [key: string]: number } = {};
+    const today = new Date();
+    for (let i = 11; i >= 0; i--) {
+        const monthDate = startOfMonth(subMonths(today, i));
+        const monthKey = format(monthDate, "yyyy-MM");
+        monthlyCounts[monthKey] = 0;
+    }
+
+    filteredAccidents.forEach(accident => {
+        const monthKey = format(new Date(accident.dateTime), "yyyy-MM");
+        if (monthlyCounts.hasOwnProperty(monthKey)) {
+            monthlyCounts[monthKey]++;
+        }
+    });
+
+    const accidentsByMonthData = Object.entries(monthlyCounts).map(([month, count]) => ({
+        month: format(new Date(`${month}-02`), "MMM", { locale: es }),
+        accidents: count,
+    }));
+
+    // Accidents by Cause
+    const causeCounts = filteredAccidents.reduce((acc, curr) => {
+        acc[curr.cause] = (acc[curr.cause] || 0) + 1;
+        return acc;
+    }, {} as { [key: string]: number });
+    
+    const accidentsByCauseData = Object.entries(causeCounts)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+
+    return { accidentsByMonthData, accidentsByCauseData };
+  }, [filteredAccidents]);
+
 
   if (isLoading) {
       return (
@@ -143,7 +180,7 @@ export default function DashboardPage() {
           <CardHeader>
               <CardTitle>Filtros del Mapa</CardTitle>
               <CardDescription>
-                Ajuste los filtros para explorar los datos de accidentes en el mapa. Las estadísticas y capas de inventario/recomendaciones son globales.
+                Ajuste los filtros para explorar los datos de accidentes en el mapa y en los gráficos. Las estadísticas de intervenciones y medidas son totales.
               </CardDescription>
           </CardHeader>
           <CardContent>
@@ -256,8 +293,11 @@ export default function DashboardPage() {
              </div>
         </CardContent>
       </Card>
+
+      <DashboardCharts 
+        accidentsByMonthData={accidentsByMonthData} 
+        accidentsByCauseData={accidentsByCauseData} 
+      />
     </>
   );
 }
-
-    
