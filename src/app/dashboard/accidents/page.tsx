@@ -91,8 +91,6 @@ export const formSchema = z.object({
   type: z.string({ required_error: "Seleccione un tipo de accidente." }),
   cause: z.string({ required_error: "Seleccione una causa probable." }),
   crossingStatus: z.string({ required_error: "Seleccione el estado del cruce." }),
-  weather: z.string({ required_error: "Seleccione la condición climática." }),
-  specialEvent: z.string({ required_error: "Seleccione si había un evento especial." }),
   observations: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
@@ -154,8 +152,6 @@ export default function AccidentsPage() {
                 type: accident.type,
                 cause: accident.cause,
                 crossingStatus: accident.crossingStatus,
-                weather: accident.weather,
-                specialEvent: accident.specialEvent,
                 observations: accident.observations,
                 latitude: accident.latitude,
                 longitude: accident.longitude,
@@ -215,7 +211,7 @@ export default function AccidentsPage() {
 
     const handleCancel = () => {
         setEditingAccidentId(null);
-        form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, type: undefined, cause: undefined, crossingStatus: undefined, weather: undefined, specialEvent: undefined, observations: "", latitude: undefined, longitude: undefined });
+        form.reset({ addressPrefix: undefined, address: "", time: "", date: undefined, type: undefined, cause: undefined, crossingStatus: undefined, observations: "", latitude: undefined, longitude: undefined });
         router.push('/dashboard/history');
     }
 
@@ -332,9 +328,9 @@ export default function AccidentsPage() {
                                             <FormMessage />
                                         </FormItem>
                                     )}/>
-
+                                    
                                     <FormField control={form.control} name="crossingStatus" render={({ field }) => (
-                                        <FormItem>
+                                        <FormItem className="md:col-span-2">
                                             <FormLabel>Estado del Cruce</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un estado" /></SelectTrigger></FormControl>
@@ -343,41 +339,6 @@ export default function AccidentsPage() {
                                                     <SelectItem value="Regular">Regular</SelectItem>
                                                     <SelectItem value="Mala">Mala</SelectItem>
                                                     <SelectItem value="Inexistente">Inexistente</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}/>
-
-                                    <FormField control={form.control} name="weather" render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Condición Climática</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccione el clima" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Soleado">Soleado</SelectItem>
-                                                    <SelectItem value="Nublado">Nublado</SelectItem>
-                                                    <SelectItem value="Lluvia Ligera">Lluvia Ligera</SelectItem>
-                                                    <SelectItem value="Lluvia Fuerte">Lluvia Fuerte</SelectItem>
-                                                    <SelectItem value="Niebla">Niebla</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}/>
-
-                                    <FormField control={form.control} name="specialEvent" render={({ field }) => (
-                                        <FormItem className="md:col-span-2">
-                                            <FormLabel>Evento Especial en la Zona</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un evento o ninguno" /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="Ninguno">Ninguno</SelectItem>
-                                                    <SelectItem value="Día de Mercado">Día de Mercado</SelectItem>
-                                                    <SelectItem value="Fiesta Local / Concierto">Fiesta Local / Concierto</SelectItem>
-                                                    <SelectItem value="Evento Deportivo">Evento Deportivo</SelectItem>
-                                                    <SelectItem value="Obra en la Vía">Obra en la Vía</SelectItem>
-                                                    <SelectItem value="Otro">Otro</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -454,5 +415,3 @@ export default function AccidentsPage() {
         </div>
     );
 }
-
-    

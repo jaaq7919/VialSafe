@@ -20,8 +20,8 @@ interface ImportResult {
   message?: string;
 }
 
-const csvTemplateHeaders = "addressPrefix,address,date,time,type,cause,crossingStatus,latitude,longitude,weather,specialEvent,observations\n";
-const csvTemplateData = "CLL,10 con 8,2024-07-15,14:30,colision,exceso-velocidad,Buena,3.3255,-76.2369,Soleado,Ninguno,El conductor del vehículo A no respetó la señal de pare.\n";
+const csvTemplateHeaders = "addressPrefix,address,date,time,type,cause,crossingStatus,latitude,longitude,observations\n";
+const csvTemplateData = "CLL,10 con 8,2024-07-15,14:30,colision,exceso-velocidad,Buena,3.3255,-76.2369,El conductor del vehículo A no respetó la señal de pare.\n";
 
 export default function ImportPage() {
   const { toast } = useToast();
@@ -78,7 +78,7 @@ export default function ImportPage() {
       const rows = text.split('\n').filter(row => row.trim() !== '');
       const headers = rows.shift()?.trim().replace(/\r$/, '');
       
-      const requiredHeaders = "addressPrefix,address,date,time,type,cause,crossingStatus,latitude,longitude,weather,specialEvent";
+      const requiredHeaders = "addressPrefix,address,date,time,type,cause,crossingStatus,latitude,longitude";
       if(headers !== requiredHeaders && headers !== requiredHeaders + ",observations"){
          toast({
           variant: "destructive",
@@ -199,5 +199,3 @@ export default function ImportPage() {
     </>
   );
 }
-
-    

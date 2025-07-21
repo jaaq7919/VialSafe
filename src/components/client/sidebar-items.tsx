@@ -21,7 +21,6 @@ import {
   Upload,
   Warehouse,
   History,
-  CloudSun,
 } from "lucide-react";
 
 type Role = UserProfile['role'];
@@ -55,12 +54,6 @@ const navItems = [
     href: "/dashboard/analysis",
     label: "Análisis de Zonas",
     icon: BarChartHorizontal,
-    roles: ["Administrador", "Analista de Tráfico"],
-  },
-  {
-    href: "/dashboard/patterns",
-    label: "Análisis de Patrones",
-    icon: CloudSun,
     roles: ["Administrador", "Analista de Tráfico"],
   },
   {
@@ -133,5 +126,3 @@ export function SidebarItems() {
     </SidebarMenu>
   );
 }
-
-    

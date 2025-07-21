@@ -18,8 +18,6 @@ export type Accident = {
   type: string;
   cause: string;
   crossingStatus: string;
-  weather: string;
-  specialEvent: string;
   observations?: string;
   latitude: number;
   longitude: number;
@@ -38,8 +36,6 @@ const csvRowSchema = z.object({
   crossingStatus: z.enum(['Buena', 'Regular', 'Mala', 'Inexistente']),
   latitude: z.number(),
   longitude: z.number(),
-  weather: z.string().min(1, "El clima es requerido."),
-  specialEvent: z.string().min(1, "El evento especial es requerido."),
   observations: z.string().optional(),
 });
 
@@ -144,9 +140,7 @@ export async function addAccidentFromCsvRow(csvRow: string) {
     crossingStatus: values[6]?.trim(),
     latitude: parseFloat(values[7]?.trim()),
     longitude: parseFloat(values[8]?.trim()),
-    weather: values[9]?.trim(),
-    specialEvent: values[10]?.trim(),
-    observations: values[11]?.trim() || '',
+    observations: values[9]?.trim() || '',
   };
 
   const validationResult = csvRowSchema.safeParse(rawData);
@@ -178,5 +172,3 @@ export async function addAccidentFromCsvRow(csvRow: string) {
     throw new Error("Error al guardar en la base de datos.");
   }
 }
-
-    
