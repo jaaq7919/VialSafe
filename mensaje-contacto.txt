@@ -1,0 +1,30 @@
+Asunto: Herramienta Innovadora para la Gestión de la Seguridad Vial en Florida
+
+Hola, muy buen día.
+
+Mi nombre es Joan Acosta y le escribo para presentarle una solución tecnológica diseñada específicamente para optimizar la gestión de la seguridad vial: **VialSafe**.
+
+VialSafe es una aplicación web integral que utiliza inteligencia artificial para transformar los datos de accidentalidad en decisiones estratégicas y acciones preventivas. Sus capacidades clave incluyen:
+
+*   **Registro y Gestión Centralizada:** Permite la entrada de datos de accidentes de forma manual, geolocalizada en un mapa, o mediante importación masiva de archivos (CSV).
+
+*   **Análisis de Zonas Críticas:** Identifica automáticamente "puntos calientes" de alta concentración de accidentes utilizando algoritmos espaciales y análisis de IA para entender por qué son peligrosos.
+
+*   **Sugerencias Inteligentes:** La IA no solo encuentra los problemas, sino que también propone soluciones, generando recomendaciones para:
+    *   **Intervenciones Viales:** Sugiere la instalación de reductores, semáforos o señalización, basándose en la normativa y las causas de los accidentes.
+    *   **Puestos de Control:** Recomienda ubicaciones y horarios óptimos para los puestos de control, maximizando su efectividad.
+
+*   **Inventario y Mapa Unificado:** Visualice y gestione todo el inventario de señalización vial (semáforos, señales verticales) en un mapa interactivo junto a los accidentes y las recomendaciones, ofreciendo una visión completa de la infraestructura.
+
+Adjunto encontrará una presentación que detalla estas funciones y le proporciono un enlace para que pueda explorar la herramienta en acción: [AQUÍ LA URL DE PRUEBA]
+
+Estaré encantado de coordinar una breve demostración virtual para mostrarle cómo VialSafe puede ser un aliado estratégico para la secretaría de tránsito.
+
+Quedo muy atento a sus comentarios.
+
+¡Gracias por su tiempo!
+
+Cordialmente,
+
+Joan Acosta
+3058540857
