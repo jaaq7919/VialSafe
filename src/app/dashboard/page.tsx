@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Eye, MapPin, Wrench, Siren, CheckCircle, Loader2, Calendar as CalendarIcon, FilterX } from "lucide-react";
-import { format, subMonths, startOfMonth } from "date-fns";
+import { format, subMonths, startOfMonth, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import type { DateRange } from "react-day-picker";
@@ -34,7 +34,10 @@ export default function DashboardPage() {
   const [settings, setSettings] = useState<{ accidentTypes: SettingItem[], accidentCauses: SettingItem[] } | null>(null);
   
   // Filters
-  const [dateFilter, setDateFilter] = useState<DateRange | undefined>();
+  const [dateFilter, setDateFilter] = useState<DateRange | undefined>({
+    from: subMonths(new Date(), 3),
+    to: new Date(),
+  });
   const [typeFilter, setTypeFilter] = useState("all");
   const [causeFilter, setCauseFilter] = useState("all");
 
@@ -75,9 +78,8 @@ export default function DashboardPage() {
             if (accidentDate < startOfDay) return false;
         }
         if (to) {
-            const endOfDay = new Date(to);
-            endOfDay.setHours(23, 59, 59, 999);
-            if (accidentDate > endOfDay) return false;
+            const toEndOfDay = endOfDay(new Date(to));
+            if (accidentDate > toEndOfDay) return false;
         }
 
         if (typeFilter && typeFilter !== 'all' && accident.type !== typeFilter) return false;
