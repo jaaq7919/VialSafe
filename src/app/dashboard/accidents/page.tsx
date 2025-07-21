@@ -30,7 +30,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, Loader2, Hospital, Phone, Shield, Flame } from "lucide-react";
 import { format } from "date-fns";
 import { es } from 'date-fns/locale';
 import { useToast } from "@/hooks/use-toast";
@@ -76,6 +76,12 @@ const addressPrefixes = [
     { value: 'ZN', label: 'ZN - Zona' },
 ];
 
+const emergencyContacts = [
+    { name: 'Hospital Benjamín Barney Gasca', phone: '(602) 264-4632', tel: '+576022644632', icon: Hospital },
+    { name: 'Cuerpo de Bomberos', phone: '119 o (602) 264-4119', tel: '119', icon: Flame },
+    { name: 'Policía Nacional', phone: '123', tel: '123', icon: Shield },
+];
+
 export const formSchema = z.object({
   addressPrefix: z.string({ required_error: "Seleccione un prefijo." }),
   address: z.string().min(3, "La dirección debe tener al menos 3 caracteres."),
@@ -96,11 +102,11 @@ export default function AccidentsPage() {
     const { toast } = useToast();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [editingAccidentId, setEditingAccidentId] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting = useState(false);
+    const [editingAccidentId, setEditingAccidentId = useState<string | null>(null);
 
-    const [causeOptions, setCauseOptions] = useState<SettingItem[]>([]);
-    const [typeOptions, setTypeOptions] = useState<SettingItem[]>([]);
+    const [causeOptions, setCauseOptions = useState<SettingItem[]>([]);
+    const [typeOptions, setTypeOptions = useState<SettingItem[]>([]);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -218,29 +224,87 @@ export default function AccidentsPage() {
     }, [form]);
 
     return (
-        <>
-            <h1 className="text-3xl font-bold tracking-tight">Gestión de Accidentes</h1>
-            <p className="text-muted-foreground mt-1">
-                {editingAccidentId ? 'Edite los datos del accidente.' : 'Registre un nuevo accidente de tránsito en Florida, Valle.'}
-            </p>
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-3xl font-bold tracking-tight">Gestión de Accidentes</h1>
+                <p className="text-muted-foreground mt-1">
+                    {editingAccidentId ? 'Edite los datos del accidente.' : 'Registre un nuevo accidente de tránsito en Florida, Valle.'}
+                </p>
+            </div>
 
-            <Card className="mt-6">
-                <CardHeader>
-                    <CardTitle>{editingAccidentId ? 'Editando Reporte de Accidente' : 'Nuevo Reporte de Accidente'}</CardTitle>
-                    <CardDescription>Complete los detalles del formulario o haga clic en el mapa para autocompletar la ubicación.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-6">
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="md:col-span-2 grid grid-cols-3 gap-4">
-                                    <FormField control={form.control} name="addressPrefix" render={({ field }) => (
-                                        <FormItem className="col-span-1">
-                                            <FormLabel>Prefijo</FormLabel>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                <Card className="lg:col-span-2">
+                    <CardHeader>
+                        <CardTitle>{editingAccidentId ? 'Editando Reporte de Accidente' : 'Nuevo Reporte de Accidente'}</CardTitle>
+                        <CardDescription>Complete los detalles del formulario o haga clic en el mapa para autocompletar la ubicación.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Form {...form}>
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="md:col-span-2 grid grid-cols-3 gap-4">
+                                        <FormField control={form.control} name="addressPrefix" render={({ field }) => (
+                                            <FormItem className="col-span-1">
+                                                <FormLabel>Prefijo</FormLabel>
+                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                    <FormControl><SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger></FormControl>
+                                                    <SelectContent>
+                                                        {addressPrefixes.map(option => (
+                                                            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}/>
+                                        <FormField control={form.control} name="address" render={({ field }) => (
+                                            <FormItem className="col-span-2">
+                                                <FormLabel>Dirección</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Ej: 8 con Calle 10" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}/>
+                                </div>
+
+                                    <FormField control={form.control} name="date" render={({ field }) => (
+                                        <FormItem className="flex flex-col">
+                                            <FormLabel>Fecha</FormLabel>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <FormControl>
+                                                    <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                                                        {field.value ? format(field.value, "PPP", { locale: es }) : <span>Elige una fecha</span>}
+                                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                    </Button>
+                                                    </FormControl>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-auto p-0" align="start">
+                                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus locale={es}/>
+                                                </PopoverContent>
+                                            </Popover>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}/>
+
+                                    <FormField control={form.control} name="time" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Hora</FormLabel>
+                                            <FormControl>
+                                                <Input type="time" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}/>
+
+                                    <FormField control={form.control} name="type" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Tipo de Accidente</FormLabel>
                                             <Select onValueChange={field.onChange} value={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger></FormControl>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un tipo" /></SelectTrigger></FormControl>
                                                 <SelectContent>
-                                                    {addressPrefixes.map(option => (
+                                                    {typeOptions.map(option => (
                                                         <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                                                     ))}
                                                 </SelectContent>
@@ -248,126 +312,105 @@ export default function AccidentsPage() {
                                             <FormMessage />
                                         </FormItem>
                                     )}/>
-                                    <FormField control={form.control} name="address" render={({ field }) => (
-                                        <FormItem className="col-span-2">
-                                            <FormLabel>Dirección</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Ej: 8 con Calle 10" {...field} />
-                                            </FormControl>
+
+                                    <FormField control={form.control} name="cause" render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Causa Probable</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccione una causa" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    {causeOptions.map(option => (
+                                                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
                                     )}/>
-                            </div>
 
-                                <FormField control={form.control} name="date" render={({ field }) => (
-                                    <FormItem className="flex flex-col">
-                                        <FormLabel>Fecha</FormLabel>
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <FormControl>
-                                                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                                    {field.value ? format(field.value, "PPP", { locale: es }) : <span>Elige una fecha</span>}
-                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                </Button>
-                                                </FormControl>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0" align="start">
-                                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date > new Date()} initialFocus locale={es}/>
-                                            </PopoverContent>
-                                        </Popover>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-
-                                <FormField control={form.control} name="time" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Hora</FormLabel>
-                                        <FormControl>
-                                            <Input type="time" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-
-                                <FormField control={form.control} name="type" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Tipo de Accidente</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un tipo" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                {typeOptions.map(option => (
-                                                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-
-                                <FormField control={form.control} name="cause" render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Causa Probable</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccione una causa" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                {causeOptions.map(option => (
-                                                    <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-
-                                <FormField control={form.control} name="crossingStatus" render={({ field }) => (
-                                    <FormItem className="md:col-span-2">
-                                        <FormLabel>Estado del Cruce</FormLabel>
-                                        <Select onValueChange={field.onChange} value={field.value}>
-                                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un estado" /></SelectTrigger></FormControl>
-                                            <SelectContent>
-                                                <SelectItem value="buena">Buena</SelectItem>
-                                                <SelectItem value="regular">Regular</SelectItem>
-                                                <SelectItem value="mala">Mala</SelectItem>
-                                                <SelectItem value="inexistente">Inexistente</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}/>
-                                <FormField
-                                    control={form.control}
-                                    name="observations"
-                                    render={({ field }) => (
+                                    <FormField control={form.control} name="crossingStatus" render={({ field }) => (
                                         <FormItem className="md:col-span-2">
-                                            <FormLabel>Observaciones</FormLabel>
-                                            <FormControl>
-                                                <Textarea
-                                                    placeholder="Añada cualquier detalle relevante del accidente..."
-                                                    {...field}
-                                                />
-                                            </FormControl>
+                                            <FormLabel>Estado del Cruce</FormLabel>
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un estado" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="buena">Buena</SelectItem>
+                                                    <SelectItem value="regular">Regular</SelectItem>
+                                                    <SelectItem value="mala">Mala</SelectItem>
+                                                    <SelectItem value="inexistente">Inexistente</SelectItem>
+                                                </SelectContent>
+                                            </Select>
                                             <FormMessage />
                                         </FormItem>
-                                    )}
-                                />
+                                    )}/>
+                                    <FormField
+                                        control={form.control}
+                                        name="observations"
+                                        render={({ field }) => (
+                                            <FormItem className="md:col-span-2">
+                                                <FormLabel>Observaciones</FormLabel>
+                                                <FormControl>
+                                                    <Textarea
+                                                        placeholder="Añada cualquier detalle relevante del accidente..."
+                                                        {...field}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button type="submit" disabled={isSubmitting}>
+                                        {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        {editingAccidentId ? 'Actualizar Reporte' : 'Enviar Reporte'}
+                                    </Button>
+                                    <Button variant="outline" type="button" onClick={handleCancel}>Cancelar</Button>
+                                </div>
+                            </form>
+                        </Form>
+                    </CardContent>
+                </Card>
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Ubicar en el Mapa</CardTitle>
+                            <CardDescription>Haga clic en el mapa para obtener la ubicación precisa.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                             <div className="h-[400px] w-full rounded-md overflow-hidden border">
+                              <LocationPicker onLocationSelect={handleLocationSelect} />
                             </div>
-                            <div className="flex gap-2">
-                                <Button type="submit" disabled={isSubmitting}>
-                                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    {editingAccidentId ? 'Actualizar Reporte' : 'Enviar Reporte'}
-                                </Button>
-                                <Button variant="outline" type="button" onClick={handleCancel}>Cancelar</Button>
-                            </div>
-                        </form>
-                    </Form>
-                     <div className="space-y-4">
-                        <label className="text-sm font-medium">Ubicar en el Mapa</label>
-                        <div className="h-[400px] md:h-full w-full rounded-md overflow-hidden border">
-                          <LocationPicker onLocationSelect={handleLocationSelect} />
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-        </>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Contactos de Emergencia</CardTitle>
+                            <CardDescription>Acceso rápido a números importantes.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            {emergencyContacts.map((contact) => (
+                                <div key={contact.name} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <contact.icon className="h-6 w-6 text-primary" />
+                                        <div>
+                                            <p className="font-semibold">{contact.name}</p>
+                                            <p className="text-sm text-muted-foreground">{contact.phone}</p>
+                                        </div>
+                                    </div>
+                                    <Button asChild size="sm">
+                                        <a href={`tel:${contact.tel}`}>
+                                            <Phone className="mr-2 h-4 w-4" />
+                                            Llamar
+                                        </a>
+                                    </Button>
+                                </div>
+                            ))}
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        </div>
     );
-}
+
+    
