@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 import { cn } from "@/lib/utils";
 import { Calendar as CalendarIcon, Loader2, Hospital, Phone, Shield, Flame } from "lucide-react";
@@ -102,11 +103,11 @@ export default function AccidentsPage() {
     const { toast } = useToast();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [isSubmitting, setIsSubmitting = useState(false);
-    const [editingAccidentId, setEditingAccidentId = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [editingAccidentId, setEditingAccidentId] = useState<string | null>(null);
 
-    const [causeOptions, setCauseOptions = useState<SettingItem[]>([]);
-    const [typeOptions, setTypeOptions = useState<SettingItem[]>([]);
+    const [causeOptions, setCauseOptions] = useState<SettingItem[]>([]);
+    const [typeOptions, setTypeOptions] = useState<SettingItem[]>([]);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -412,5 +413,4 @@ export default function AccidentsPage() {
             </div>
         </div>
     );
-
-    
+}
