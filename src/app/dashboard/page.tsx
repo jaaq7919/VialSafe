@@ -3,12 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { DashboardCharts } from "@/components/client/dashboard-charts";
 import { Eye, MapPin, Wrench, Siren, CheckCircle, Loader2, Calendar as CalendarIcon, FilterX } from "lucide-react";
-import { getAccidents, type Accident } from "@/services/accidents";
-import { getRecommendations, type Recommendation } from "@/services/recommendations";
-import { getSettings, type AppSettings } from "@/services/settings";
-import { dbscan } from "@/lib/dbscan";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -18,48 +13,15 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import { getSettings, type SettingItem } from "@/services/settings";
+import { getDashboardData, type DashboardData } from "@/services/dashboard";
+import { dbscan } from "@/lib/dbscan";
+import dynamic from 'next/dynamic';
 
-// Helper function to process data for charts
-const processChartData = (accidents: Accident[], causeLabels: { [key: string]: string }) => {
-    const accidentsByMonth: { [key: string]: number } = {};
-    const accidentsByCause: { [key: string]: number } = {};
-
-    accidents.forEach(accident => {
-        const date = new Date(accident.dateTime);
-        const monthYearKey = format(date, 'MMM-yy', { locale: es });
-        
-        accidentsByMonth[monthYearKey] = (accidentsByMonth[monthYearKey] || 0) + 1;
-        
-        const causeLabel = causeLabels[accident.cause] || 'Otro';
-        accidentsByCause[causeLabel] = (accidentsByCause[causeLabel] || 0) + 1;
-    });
-
-    const dateMap = new Map<string, Date>();
-    Object.keys(accidentsByMonth).forEach(key => {
-        const [monthStr, yearStr] = key.split('-');
-        const monthIndex = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'].indexOf(monthStr.toLowerCase());
-        const year = parseInt(yearStr, 10) + 2000;
-        if(monthIndex !== -1) {
-            dateMap.set(key, new Date(year, monthIndex));
-        }
-    });
-
-    const accidentsByMonthData = Object.entries(accidentsByMonth)
-        .map(([month, accidents]) => ({ month: month.charAt(0).toUpperCase() + month.slice(1), accidents }))
-        .sort((a, b) => {
-            const dateA = dateMap.get(a.month.toLowerCase());
-            const dateB = dateMap.get(b.month.toLowerCase());
-            if (dateA && dateB) {
-                return dateA.getTime() - dateB.getTime();
-            }
-            return 0;
-        });
-
-    const accidentsByCauseData = Object.entries(accidentsByCause)
-        .map(([name, value]) => ({ name, value }));
-
-    return { accidentsByMonthData, accidentsByCauseData };
-};
+const UnifiedMap = dynamic(() => import('@/components/client/unified-map'), {
+    ssr: false,
+    loading: () => <div className="h-[600px] w-full rounded-md bg-muted flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>
+});
 
 
 export default function DashboardPage() {
@@ -67,9 +29,8 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   
   // Raw data from Firestore
-  const [allAccidents, setAllAccidents] = useState<Accident[]>([]);
-  const [allRecommendations, setAllRecommendations] = useState<Recommendation[]>([]);
-  const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardData>({ accidents: [], recommendations: [], inventoryItems: []});
+  const [settings, setSettings] = useState<{ accidentTypes: SettingItem[], accidentCauses: SettingItem[] } | null>(null);
   
   // Filters
   const [dateFilter, setDateFilter] = useState<DateRange | undefined>();
@@ -79,13 +40,11 @@ export default function DashboardPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-        const [accidents, recommendations, settingsData] = await Promise.all([
-            getAccidents(),
-            getRecommendations(),
+        const [data, settingsData] = await Promise.all([
+            getDashboardData(),
             getSettings()
         ]);
-        setAllAccidents(accidents);
-        setAllRecommendations(recommendations);
+        setDashboardData(data);
         setSettings(settingsData);
     } catch(error) {
         toast({
@@ -103,7 +62,7 @@ export default function DashboardPage() {
   }, [fetchData]);
   
   const filteredAccidents = useMemo(() => {
-    return allAccidents.filter(accident => {
+    return dashboardData.accidents.filter(accident => {
         if (!accident.dateTime) return false;
         const accidentDate = new Date(accident.dateTime);
         const from = dateFilter?.from;
@@ -125,7 +84,7 @@ export default function DashboardPage() {
         
         return true;
     });
-  }, [allAccidents, dateFilter, typeFilter, causeFilter]);
+  }, [dashboardData.accidents, dateFilter, typeFilter, causeFilter]);
   
   const handleClearFilters = () => {
       setDateFilter(undefined);
@@ -133,12 +92,9 @@ export default function DashboardPage() {
       setCauseFilter("all");
   };
 
-  const causeLabels = useMemo(() => Object.fromEntries((settings?.accidentCauses || []).map(c => [c.value, c.label])), [settings]);
   const typeOptions = useMemo(() => settings?.accidentTypes || [], [settings]);
   const causeOptions = useMemo(() => settings?.accidentCauses || [], [settings]);
   
-  const { accidentsByMonthData, accidentsByCauseData } = useMemo(() => processChartData(filteredAccidents, causeLabels), [filteredAccidents, causeLabels]);
-
   const { criticalZonesCount, pendingInterventionsCount, implementedMeasuresCount } = useMemo(() => {
     let zonesCount = 0;
     if (filteredAccidents.length >= 2) {
@@ -149,17 +105,17 @@ export default function DashboardPage() {
     }
     
     // Recommendations are not filtered by date/type/cause, they show the global status.
-    const pendingCount = allRecommendations.filter(rec => 
+    const pendingCount = dashboardData.recommendations.filter(rec => 
       rec.status === 'Sugerida' || rec.status === 'Aprobada' || rec.status === 'En Ejecución'
     ).length;
-    const implementedCount = allRecommendations.filter(rec => rec.status === 'Implementada').length;
+    const implementedCount = dashboardData.recommendations.filter(rec => rec.status === 'Implementada').length;
 
     return { 
         criticalZonesCount: zonesCount, 
         pendingInterventionsCount: pendingCount, 
         implementedMeasuresCount: implementedCount 
     };
-  }, [filteredAccidents, allRecommendations]);
+  }, [filteredAccidents, dashboardData.recommendations]);
 
   const stats = [
     { title: "Accidentes en Periodo", value: filteredAccidents.length.toString(), icon: Siren, change: "Según filtros aplicados" },
@@ -178,16 +134,16 @@ export default function DashboardPage() {
 
   return (
     <>
-      <h1 className="text-3xl font-bold tracking-tight">Panel Principal</h1>
+      <h1 className="text-3xl font-bold tracking-tight">Panel de Mapa Unificado</h1>
       <p className="text-muted-foreground mt-1">
-        Resumen de métricas y tendencias de seguridad vial.
+        Visualización integrada de todos los datos de seguridad vial en Florida, Valle.
       </p>
 
       <Card className="mt-6">
           <CardHeader>
-              <CardTitle>Filtros del Panel</CardTitle>
+              <CardTitle>Filtros del Mapa</CardTitle>
               <CardDescription>
-                Ajuste los filtros para explorar los datos de accidentes en periodos o categorías específicas. Las estadísticas de intervenciones son globales.
+                Ajuste los filtros para explorar los datos de accidentes en el mapa. Las estadísticas y capas de inventario/recomendaciones son globales.
               </CardDescription>
           </CardHeader>
           <CardContent>
@@ -263,7 +219,7 @@ export default function DashboardPage() {
                  <div className="lg:col-span-2 flex justify-end gap-2">
                     <Button variant="ghost" onClick={handleClearFilters}>
                         <FilterX className="mr-2 h-4 w-4" />
-                        Limpiar Filtros
+                        Limpiar Filtros de Accidentes
                     </Button>
                  </div>
               </div>
@@ -284,7 +240,24 @@ export default function DashboardPage() {
           </Card>
         ))}
       </div>
-      <DashboardCharts accidentsByMonthData={accidentsByMonthData} accidentsByCauseData={accidentsByCauseData} />
+      
+      <Card className="mt-6">
+        <CardHeader>
+            <CardTitle>Mapa Interactivo de Seguridad Vial</CardTitle>
+            <CardDescription>Use los controles en la esquina superior derecha del mapa para alternar las capas de datos.</CardDescription>
+        </CardHeader>
+        <CardContent>
+             <div className="h-[600px] w-full rounded-md overflow-hidden border">
+                <UnifiedMap 
+                    accidents={filteredAccidents}
+                    inventoryItems={dashboardData.inventoryItems}
+                    recommendations={dashboardData.recommendations}
+                />
+             </div>
+        </CardContent>
+      </Card>
     </>
   );
 }
+
+    
